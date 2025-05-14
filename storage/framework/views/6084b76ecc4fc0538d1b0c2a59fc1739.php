@@ -1,0 +1,3 @@
+<div class="col-lg-12">
+    <a class="modalLink primary-btn small fix-gr-bg" data-modal-size="modal-lg" title="<?php echo app('translator')->get('academics.class'); ?> <?php echo e(@$assignedClass->globalClassName->class_name .'('.$assignedClass->globalSectionName->section_name .')'); ?>  <?php echo app('translator')->get('study.study_material'); ?>" href="<?php echo e(url('global-upload-content-modal?global_class_id='.$assignedClass->class_id.'&'.'global_section_id='.$assignedClass->section_id)); ?>"><?php echo app('translator')->get('study.study_material'); ?> - (<?php echo e($globalStudyMat); ?>)</a>
+</div><?php /**PATH C:\xampp\htdocs\resources\views\backEnd\global\ajax_assigned_study_mat_list.blade.php ENDPATH**/ ?>

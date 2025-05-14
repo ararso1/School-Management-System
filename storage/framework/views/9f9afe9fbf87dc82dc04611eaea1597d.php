@@ -1,0 +1,1 @@
+<?php /**PATH C:\xampp\htdocs\Modules\Lesson\Resources\views\menu\lessonPlannerSidebar.blade.php ENDPATH**/ ?>

@@ -1,0 +1,3 @@
+<?php echo $__env->make('frontEnd.home.header', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+<?php echo $__env->yieldContent('mainContent'); ?>
+<?php echo $__env->make('frontEnd.home.footer', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\xampp\htdocs\resources\views\frontEnd\home\frontendMaster.blade.php ENDPATH**/ ?>
