@@ -161,7 +161,7 @@
                             <div class="mr-20 mt-10">
                                 <input type="radio" name="set_auth" id="set_auth_on" value="header"
                                     class="common-radio relationButton"
-                                    @if (isset($editData) && $editData->set_auth == 'header') checked @endif>
+                                    @if (!isset($editData) || (isset($editData) && $editData->set_auth == 'header')) checked @endif>
                                 <label for="set_auth_on">Header</label>
                             </div>
                             <div class="mr-20 mt-10">
@@ -597,5 +597,44 @@
             $("#closeFormBtn").css("display", "none");
             $("#addFromBtn").css("display", "block");
         }
+
+        // Activate custom SMS gateway (checkbox previously did nothing)
+        $(document).on('change', '.custom_sms_status', function() {
+            var gatewayId = $(this).data('id') || $(this).val();
+            var url = $('#url').val();
+            if (!gatewayId || !url) {
+                return;
+            }
+
+            $('.custom_sms_status').not(this).prop('checked', false);
+
+            $.ajax({
+                type: 'get',
+                data: {
+                    sms_service: gatewayId
+                },
+                url: url + '/activeSmsService',
+                success: function(data) {
+                    if (data == 'success') {
+                        toastr.success('This Service is Active Now', 'Successful', {
+                            timeOut: 5000
+                        });
+                        // Keep Select SMS Service dropdown in sync if present
+                        if ($('#sms_service').length) {
+                            $('#sms_service').val(gatewayId);
+                        }
+                    } else {
+                        toastr.error('Failed to activate SMS service', 'Error', {
+                            timeOut: 5000
+                        });
+                    }
+                },
+                error: function() {
+                    toastr.error('Failed to activate SMS service', 'Error', {
+                        timeOut: 5000
+                    });
+                }
+            });
+        });
     </script>
 @endpush

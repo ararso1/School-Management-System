@@ -3284,6 +3284,33 @@ if (!function_exists('allExamsSubjectTotalMark')) {
     }
 }
 
+if (!function_exists('normalize_ethiopian_msisdn')) {
+    /**
+     * Normalize phone numbers to SMS Ethiopia format: 251XXXXXXXXX
+     */
+    function normalize_ethiopian_msisdn($number)
+    {
+        $digits = preg_replace('/\D+/', '', (string) $number);
+        if ($digits === '') {
+            return $number;
+        }
+
+        if (strpos($digits, '251') === 0 && strlen($digits) === 12) {
+            return $digits;
+        }
+
+        if (strpos($digits, '0') === 0 && strlen($digits) === 10) {
+            return '251' . substr($digits, 1);
+        }
+
+        if (strlen($digits) === 9 && strpos($digits, '9') === 0) {
+            return '251' . $digits;
+        }
+
+        return $digits;
+    }
+}
+
 if (!function_exists('send_custom_sms')) {
     function send_custom_sms($reciver_number, $message, $active_gateway = null)
     {
@@ -3298,69 +3325,96 @@ if (!function_exists('send_custom_sms')) {
         $sms_settings = CustomSmsSetting::where('gateway_id', $active_gateway->id)->first();
 
         $response = false;
-        if (empty($sms_settings->gateway_url)) {
+        if (!$sms_settings || empty($sms_settings->gateway_url)) {
             Toastr::info(__('common.set_sms_credentials'), __('common.info'));
             return $response;
         }
+
+        $is_sms_ethiopia = stripos($sms_settings->gateway_url, 'smsethiopia.com') !== false
+            || stripos((string) $sms_settings->gateway_name, 'sms ethiopia') !== false;
+
+        // SMS Ethiopia expects msisdn as 251XXXXXXXXX
+        if ($is_sms_ethiopia) {
+            $reciver_number = normalize_ethiopian_msisdn($reciver_number);
+        }
+
         $request_data = [
             $sms_settings->send_to_parameter_name => $reciver_number,
             $sms_settings->messege_to_parameter_name => $message,
         ];
 
-
-        if (!empty($sms_settings->param_key_1)) {
-            $request_data[$sms_settings->param_key_1] = $sms_settings->param_value_1;
-        }
-        if (!empty($sms_settings->param_key_2)) {
-            $request_data[$sms_settings->param_key_2] = $sms_settings->param_value_2;
-        }
-        if (!empty($sms_settings->param_key_3)) {
-            $request_data[$sms_settings->param_key_3] = $sms_settings->param_value_3;
-        }
-        if (!empty($sms_settings->param_key_4)) {
-            $request_data[$sms_settings->param_key_4] = $sms_settings->param_value_4;
-        }
-        if (!empty($sms_settings->param_key_5)) {
-            $request_data[$sms_settings->param_key_5] = $sms_settings->param_value_5;
-        }
-        if (!empty($sms_settings->param_key_6)) {
-            $request_data[$sms_settings->param_key_6] = $sms_settings->param_value_6;
-        }
-        if (!empty($sms_settings->param_key_7)) {
-            $request_data[$sms_settings->param_key_7] = $sms_settings->param_value_7;
-        }
-        if (!empty($sms_settings->param_key_8)) {
-            $request_data[$sms_settings->param_key_8] = $sms_settings->param_value_8;
+        $extra_params = [];
+        for ($i = 1; $i <= 8; $i++) {
+            $key = $sms_settings->{'param_key_' . $i};
+            $value = $sms_settings->{'param_value_' . $i};
+            if (!empty($key)) {
+                $extra_params[$key] = $value;
+            }
         }
 
         $params = [];
+        $headers = [
+            'Accept' => 'application/json',
+        ];
 
-        $user_name = array_search('username', $sms_settings->toArray());
-        $password = array_search('password', $sms_settings->toArray());
+        $user_name = array_search('username', $sms_settings->toArray(), true);
+        $password = array_search('password', $sms_settings->toArray(), true);
+        $use_basic_auth = $user_name && $password && $sms_settings->set_auth == "header" && !$is_sms_ethiopia;
+        // JSON + custom headers for SMS Ethiopia, or any gateway with Header auth (non-basic)
+        $use_json_header_auth = $is_sms_ethiopia || ($sms_settings->set_auth == "header" && !$use_basic_auth);
 
-        if ($user_name && $password && $sms_settings->set_auth == "header") {
+        if ($use_basic_auth) {
+            // Legacy custom gateways: username/password via HTTP Basic Auth
+            $request_data = array_merge($request_data, $extra_params);
             $params['auth'] = [
                 $request_data[$sms_settings->$user_name],
                 $request_data[$sms_settings->$password],
             ];
             unset($request_data['username']);
             unset($request_data['password']);
+        } elseif ($use_json_header_auth) {
+            // Custom header auth (e.g. SMS Ethiopia KEY header)
+            $headers = array_merge($headers, $extra_params);
+        } else {
+            // Auth/credentials in URL or body params
+            $request_data = array_merge($request_data, $extra_params);
         }
-
 
         if (array_key_exists("csms_id", $request_data)) {
-            $request_data->csms_id = date('dmY');
+            $request_data['csms_id'] = date('dmY');
         }
 
-        $params['form_params'] = $request_data;
+        $client = new \GuzzleHttp\Client(['http_errors' => false, 'timeout' => 30]);
+        $method = strtolower($sms_settings->request_method ?: 'post');
 
-        $client = new \GuzzleHttp\Client();
-        $method = strtolower($sms_settings->request_method);
+        try {
+            if ($method == 'get') {
+                $response = $client->get($sms_settings->gateway_url . '?' . http_build_query($request_data), [
+                    'headers' => $headers,
+                ]);
+            } elseif ($use_json_header_auth) {
+                // JSON POST with custom headers (SMS Ethiopia and similar APIs)
+                $headers['Content-Type'] = 'application/json';
+                $response = $client->post($sms_settings->gateway_url, [
+                    'headers' => $headers,
+                    'json' => $request_data,
+                ]);
+            } else {
+                $params['form_params'] = $request_data;
+                $params['headers'] = $headers;
+                $response = $client->$method($sms_settings->gateway_url, $params);
+            }
 
-        if ($method == 'get') {
-            $response = $client->$method($sms_settings->gateway_url . '?' . http_build_query($request_data));
-        } else {
-            $response = $client->$method($sms_settings->gateway_url, $params);
+            if ($response && method_exists($response, 'getStatusCode') && $response->getStatusCode() >= 400) {
+                Log::warning('Custom SMS gateway error', [
+                    'status' => $response->getStatusCode(),
+                    'body' => (string) $response->getBody(),
+                    'gateway' => $sms_settings->gateway_name,
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Custom SMS send failed: ' . $e->getMessage());
+            return false;
         }
 
         return $response;

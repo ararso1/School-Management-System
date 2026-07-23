@@ -1,0 +1,30 @@
+==============================================
+ADD THESE VARIABLES TO YOUR .env FILE
+==============================================
+
+Copy and paste these lines into your .env file
+(located at the root of your project: C:\xampp\htdocs\school\.env)
+
+----------------------------------------------
+
+# Gmail SMTP Configuration for Forgot Password
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=arasoalisho2@gmail.com
+MAIL_PASSWORD="sxen rsqe xjkh slrg"
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=arasoalisho2@gmail.com
+MAIL_FROM_NAME="Meahidalnur School"
+
+----------------------------------------------
+
+NOTES:
+1. The password is a Gmail App Password (not your regular Gmail password)
+2. Keep the quotes around the password to preserve spaces
+3. After adding these variables, run: php artisan config:clear
+4. The database has already been updated with these settings
+5. These .env variables are optional - the system will work with the database settings
+
+==============================================
+

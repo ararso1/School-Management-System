@@ -35,7 +35,7 @@
       </div>
   </div>
 </section>
-<?php if (! $__env->hasRenderedOnce('917ce1eb-16ef-4799-aa99-7c6c796f13ac')): $__env->markAsRenderedOnce('917ce1eb-16ef-4799-aa99-7c6c796f13ac');
+<?php if (! $__env->hasRenderedOnce('a1b58d83-f87c-4390-8bba-277dd53143d5')): $__env->markAsRenderedOnce('a1b58d83-f87c-4390-8bba-277dd53143d5');
 $__env->startPush(config('pagebuilder.site_script_var')); ?>
     <script>
             // notification area

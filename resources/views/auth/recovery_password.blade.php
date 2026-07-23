@@ -111,43 +111,68 @@ $css = 'background:' . $login_background->color;
                             <img src="{{asset(@$setting->logo)}}" alt="" class="logoimage">
                         </a>
                     </div>
-                    <div class="text-center">
-                        <h5 class="text-uppercase font-bold">@lang('auth.reset_password')</h5>
-                        @if(session()->has('message-success') != "")
-                            @if(session()->has('message-success'))
-                                <p class="text-success">{{session()->get('message-success')}}</p>
-                            @endif
-                        @endif
-                        @if(session()->has('message-danger') != "")
-                            @if(session()->has('message-danger'))
-                                <p class="text-danger">{{session()->get('message-danger')}}</p>
-                            @endif
-                        @endif
+                    @if(session()->has('message-success'))
+                        <!-- Success Confirmation Screen -->
+                        <div class="text-center success-confirmation">
+                            <div style="margin-bottom: 20px;">
+                                <i class="ti-check-box" style="font-size: 64px; color: #28a745;"></i>
+                            </div>
+                            <h4 class="text-success font-bold mb-3">@lang('Email Sent Successfully!')</h4>
+                            <p class="text-success mb-3" style="font-size: 16px;">{{session()->get('message-success')}}</p>
+                            
+                            <div class="alert alert-info text-left" style="margin: 20px auto; max-width: 400px;">
+                                <p class="mb-2"><i class="ti-info-alt"></i> <strong>What's next?</strong></p>
+                                <ul style="list-style: none; padding-left: 0; margin-bottom: 0;">
+                                    <li class="mb-2">✓ Check your email inbox</li>
+                                    <li class="mb-2">✓ Click on the reset link in the email</li>
+                                    <li class="mb-2">✓ The link will expire in 24 hours</li>
+                                    <li>✓ Don't forget to check your spam folder</li>
+                                </ul>
+                            </div>
 
-                    </div>
-                    <form method="POST" class="" action="{{ route('email/verify') }}">
-                        @csrf
-                        <div class="form-group input-group mb-4 mx-3">
+                            <div class="mt-4">
+                                <a href="{{route('login')}}" class="primary-btn fix-gr-bg mr-2">
+                                    <i class="ti-arrow-left mr-1"></i> Back to Login
+                                </a>
+                                <a href="{{route('recoveryPassord')}}" class="primary-btn tr-bg">
+                                    <i class="ti-email mr-1"></i> Send Another Email
+                                </a>
+                            </div>
+                        </div>
+                    @else
+                        <!-- Password Reset Form -->
+                        <div class="text-center">
+                            <h5 class="text-uppercase font-bold">@lang('auth.reset_password')</h5>
+                            @if(session()->has('message-danger') != "")
+                                @if(session()->has('message-danger'))
+                                    <p class="text-danger">{{session()->get('message-danger')}}</p>
+                                @endif
+                            @endif
+                        </div>
+                        
+                        <form method="POST" class="" action="{{ route('email/verify') }}">
+                            @csrf
+                            <div class="form-group input-group mb-4 mx-3">
 								<span class="input-group-addon">
 									<i class="ti-email"></i>
 								</span>
-                            <input class="form-control{{ $errors->has('email') ? ' is-invalid' : '' }}" type="email"
-                                   name='email' placeholder="@lang('auth.enter_email_address')"/>
-                            @if ($errors->has('email'))
-                                <span class="text-danger text-left pl-3" role="alert">
+                                <input class="form-control{{ $errors->has('email') ? ' is-invalid' : '' }}" type="email"
+                                       name='email' placeholder="@lang('auth.enter_email_address')" value="{{ old('email') }}"/>
+                                @if ($errors->has('email'))
+                                    <span class="text-danger text-left pl-3" role="alert">
                                         {{ $errors->first('email') }}
                                     </span>
-                            @endif
-                        </div>
+                                @endif
+                            </div>
 
-
-                        <div class="form-group mt-30 mb-30">
-                            <button type="submit" class="primary-btn fix-gr-bg">
-                                <span class="ti-lock mr-2"></span>
-                                @lang('common.submit')
-                            </button>
-                        </div>
-                    </form>
+                            <div class="form-group mt-30 mb-30">
+                                <button type="submit" class="primary-btn fix-gr-bg">
+                                    <span class="ti-lock mr-2"></span>
+                                    @lang('common.submit')
+                                </button>
+                            </div>
+                        </form>
+                    @endif
                 </div>
             </div>
         </div>

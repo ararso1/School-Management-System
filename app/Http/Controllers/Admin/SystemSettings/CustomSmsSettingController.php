@@ -37,16 +37,22 @@ class CustomSmsSettingController extends Controller
         }
 
         try {
+            // Deactivate other gateways so the new custom gateway is used immediately
+            SmSmsGateway::where('school_id', Auth::user()->school_id)
+                ->where('active_status', 1)
+                ->update(['active_status' => 0]);
+
             $gateway = new SmSmsGateway();
             $gateway->gateway_name = $request->gateway_name;
             $gateway->gateway_type = "custom";
+            $gateway->active_status = 1;
             $gateway->school_id = Auth::user()->school_id;
             $result = $gateway->save();
             if ($result) {
                 $customSmsSetting = new CustomSmsSetting();
                 $customSmsSetting->gateway_id = $gateway->id;
                 $customSmsSetting->gateway_name = $request->gateway_name;
-                $customSmsSetting->set_auth = $request->set_auth;
+                $customSmsSetting->set_auth = $request->set_auth ?: 'header';
                 $customSmsSetting->gateway_url = $request->gateway_url;
                 $customSmsSetting->send_to_parameter_name = $request->send_to_parameter_name;
                 $customSmsSetting->messege_to_parameter_name = $request->messege_to_parameter_name;
@@ -129,7 +135,7 @@ class CustomSmsSettingController extends Controller
                 $customSmsSetting->gateway_id = $gateway->id;
                 $customSmsSetting->gateway_name = $request->gateway_name;
                 $customSmsSetting->gateway_url = $request->gateway_url;
-                $customSmsSetting->set_auth = $request->set_auth;
+                $customSmsSetting->set_auth = $request->set_auth ?: 'header';
                 $customSmsSetting->send_to_parameter_name = $request->send_to_parameter_name;
                 $customSmsSetting->messege_to_parameter_name = $request->messege_to_parameter_name;
                 $customSmsSetting->request_method = $request->request_method;
@@ -169,10 +175,45 @@ class CustomSmsSettingController extends Controller
             'reciver_no' => 'required',
         ]);
 
-        @send_sms($request->reciver_no, 'test_sms', $compact = null);
+        try {
+            $school_id = Auth::user()->school_id ?? 1;
+            $activeSmsGateway = SmSmsGateway::where('school_id', $school_id)->where('active_status', 1)->first();
 
-        Toastr::success('Operation Successfull', 'Success');
-        return redirect()->back();
+            if (!$activeSmsGateway) {
+                Toastr::error('No active SMS gateway. Select one under SMS Settings.', 'Failed');
+                return redirect()->back();
+            }
+
+            if ($activeSmsGateway->gateway_type == 'custom') {
+                $body = 'It is a Test Sms From ' . $activeSmsGateway->gateway_name . ' -' . generalSetting()->school_name;
+                $response = send_custom_sms($request->reciver_no, $body, $activeSmsGateway);
+
+                if (!$response || !method_exists($response, 'getStatusCode')) {
+                    Toastr::error('SMS send failed. Check gateway URL, KEY header, and phone format.', 'Failed');
+                    return redirect()->back();
+                }
+
+                $status = $response->getStatusCode();
+                $responseBody = (string) $response->getBody();
+                $json = json_decode($responseBody, true);
+
+                if ($status >= 200 && $status < 300 && (!isset($json['sent']) || $json['sent'] === true)) {
+                    Toastr::success('Test SMS sent successfully via ' . $activeSmsGateway->gateway_name, 'Success');
+                } else {
+                    $error = $json['error_message'] ?? $json['error'] ?? $json['description'] ?? $responseBody;
+                    Toastr::error('SMS gateway error (' . $status . '): ' . $error, 'Failed');
+                }
+
+                return redirect()->back();
+            }
+
+            send_sms($request->reciver_no, 'test_sms', null);
+            Toastr::success('Test SMS requested via ' . $activeSmsGateway->gateway_name, 'Success');
+            return redirect()->back();
+        } catch (\Exception $e) {
+            Toastr::error('SMS test failed: ' . $e->getMessage(), 'Failed');
+            return redirect()->back();
+        }
     }
 
     public function delete(Request $request)
