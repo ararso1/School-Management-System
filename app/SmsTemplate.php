@@ -76,6 +76,8 @@ class SmsTemplate extends Model
         $body = str_replace('[return_date]', @$data['return_date'], $body);
 
         $body = str_replace('[dues_amount]', @$data['due_amount'], $body);
+        $body = str_replace('[due_amount]', @$data['due_amount'], $body);
+        $body = replaceFeePlaceholders($body, $data);
         $body = str_replace('[fees_name]', @$data['fees_name'], $body);
         $body = str_replace('[date]', @$data['date'], $body);
 
@@ -208,6 +210,7 @@ class SmsTemplate extends Model
 
         $body = str_replace('[due_amount]', @$data['due_amount'], $body);
         $body = str_replace('[fees_name]', @$data['fees_name'], $body);
+        $body = replaceFeePlaceholders($body, $data);
 
         $body = str_replace('[school_name]', @generalSetting()->school_name, $body);
 

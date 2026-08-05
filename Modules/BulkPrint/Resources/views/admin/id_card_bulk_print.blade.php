@@ -80,20 +80,42 @@
             body {
                 -webkit-print-color-adjust: exact;
             }
+            .no-print, input#button {
+                display: none !important;
+            }
+            .id-card-back {
+                page-break-after: always;
+            }
         }
     </style>
 </head>
 
 <body id="abc">
-    <input type="button" onclick="printDiv('abc')" id="button" class="primary-btn small fix-gr-bg" value="print" />
+    <div class="no-print" style="max-width:900px;margin:12px auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="button" onclick="printDiv('abc')" id="button" class="primary-btn small fix-gr-bg" value="Print" />
+        @php
+            $pdfStudentIds = collect($s_students)->pluck('id')->filter()->implode('-');
+        @endphp
+        @if($role_id == 2 && $pdfStudentIds && !empty($id_card->id))
+            <a href="{{ url('generate-id-card-print/'.$pdfStudentIds.'/'.$id_card->id) }}?format=pdf"
+               class="primary-btn small fix-gr-bg"
+               style="padding:8px 14px;color:#7c32ff;background:#fff;border:1px solid #7c32ff;border-radius:4px;text-decoration:none;line-height:40px;">
+                Download PDF
+            </a>
+        @endif
+    </div>
 
     <div class="id_card" id="id_card"
-        style="display: grid !important;grid-template-columns: repeat(3,1fr) !important;grid-gap: {{ $gridGap }}px;justify-content: center;">
+        style="display: grid !important;grid-template-columns: repeat({{ ($id_card->design_mode ?? 'classic') === 'template' ? 1 : 3 }},1fr) !important;grid-gap: {{ $gridGap }}px;justify-content: center;">
         @php
         $roleId = json_decode($id_card->role_id);
         @endphp
         
         @foreach ($s_students as $staff_student)
+            @if(($id_card->design_mode ?? 'classic') === 'template' && $role_id == 2)
+                @include('backEnd.admin.idCard.partials.template_card', ['id_card' => $id_card, 'student' => $staff_student, 'role_id' => $role_id])
+                @continue
+            @endif
             @if (!in_array(3, $roleId))
                 @if ($id_card->page_layout_style == 'horizontal')
                 <div id="horizontal"

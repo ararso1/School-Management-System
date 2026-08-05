@@ -1128,7 +1128,10 @@ Route::group(['middleware' => ['XSS', 'subscriptionAccessUrl']], function  (){
 
         // Route::post('generate-id-card-search', ['as' => 'generate_id_card_search', 'uses' => 'Admin\AdminSection\SmStudentIdCardController@generateIdCardSearch']);
         Route::get('generate-id-card-search', ['as' => 'generate_id_card_search', 'uses' => 'Admin\AdminSection\SmStudentIdCardController@generateIdCard']);
-        Route::get('generate-id-card-print/{s_id}/{c_id}', 'Admin\AdminSection\SmStudentIdCardController@generateIdCardPrint');
+        Route::get('generate-id-card-print/{s_id}/{c_id}', 'Admin\AdminSection\SmStudentIdCardController@generateIdCardPrint')->name('generate-id-card-print');
+        Route::get('student-view/{id}/id-card', 'Admin\AdminSection\SmStudentIdCardController@studentIdCardView')->name('student_id_card_view');
+        Route::get('student-view/{id}/id-card/download', 'Admin\AdminSection\SmStudentIdCardController@studentIdCardDownload')->name('student_id_card_download');
+        Route::get('student-view/{id}/id-card/print', 'Admin\AdminSection\SmStudentIdCardController@studentIdCardPrint')->name('student_id_card_print');
 
 
 

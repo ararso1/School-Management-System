@@ -79,6 +79,14 @@
                                     @endif
                                 </div>
                             </div>
+
+                            <div class="col-lg-4 mt-30-md">
+                                <label class="primary_input_label" for="">Output</label>
+                                <select class="primary_select form-control" name="output">
+                                    <option value="print" {{ old('output', 'print') == 'print' ? 'selected' : '' }}>Preview / Print</option>
+                                    <option value="pdf" {{ old('output') == 'pdf' ? 'selected' : '' }}>Export as PDF</option>
+                                </select>
+                            </div>
                             
                             <div class="col-lg-12 mt-20 text-right">
                                 <button type="submit" class="primary-btn small fix-gr-bg">

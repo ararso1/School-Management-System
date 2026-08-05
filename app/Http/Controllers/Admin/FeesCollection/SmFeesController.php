@@ -726,6 +726,9 @@ class SmFeesController extends Controller
 
             foreach($students as $student){
                 $compact['due_amount'] = $request->dues_amount[$student->id];
+                $compact['fees'] = $request->dues_amount[$student->id];
+                $compact['fee'] = $request->dues_amount[$student->id];
+                $compact['amount'] = $request->dues_amount[$student->id];
                 $compact['fees_name'] = @$fees_info->feesType->name;
                 $compact['student_name'] = @$student->full_name;
                 $compact['date'] = @$fees_info->feesGroups->due_date ?? date('Y-m-d');

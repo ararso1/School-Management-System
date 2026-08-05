@@ -2460,6 +2460,118 @@ function studentFieldLabel($fields, $name)
     return __('student.' . $name);
 }
 
+if (!function_exists('notificationFeeAmount')) {
+    /**
+     * Resolve fee amount for SMS/Email notification placeholders ([fees], [fee]).
+     * Treats empty strings as missing and sums numeric arrays.
+     */
+    function notificationFeeAmount($data)
+    {
+        if (!is_array($data)) {
+            return '';
+        }
+
+        $keys = [
+            'fees',
+            'fee',
+            'amount',
+            'due_amount',
+            'dues_amount',
+            'total_paid',
+            'total_paid_amount',
+            'grand_total',
+            'sub_total',
+            'paid_amount',
+        ];
+
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $data)) {
+                continue;
+            }
+
+            $value = $data[$key];
+            if (is_array($value)) {
+                $sum = 0;
+                $hasNumeric = false;
+                $parts = [];
+                foreach ($value as $item) {
+                    if ($item === null || $item === '') {
+                        continue;
+                    }
+                    if (is_numeric($item)) {
+                        $sum += (float) $item;
+                        $hasNumeric = true;
+                    } else {
+                        $parts[] = $item;
+                    }
+                }
+                if ($hasNumeric) {
+                    return (string) round($sum, 2);
+                }
+                if (!empty($parts)) {
+                    return implode(', ', $parts);
+                }
+                continue;
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            return is_numeric($value) ? (string) $value : (string) $value;
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('replaceFeePlaceholders')) {
+    function replaceFeePlaceholders($body, $data)
+    {
+        $feeAmount = notificationFeeAmount($data);
+        foreach (['[fees]', '[Fees]', '[FEES]', '[fee]', '[Fee]', '[FEE]'] as $token) {
+            $body = str_replace($token, $feeAmount, $body);
+        }
+        return $body;
+    }
+}
+
+if (!function_exists('sumFeeRequestAmounts')) {
+    /**
+     * Sum fee amounts from invoice assign request groups/types (prefer sub_total, fallback amount).
+     */
+    function sumFeeRequestAmounts($items)
+    {
+        if (!is_array($items) || empty($items)) {
+            return '';
+        }
+
+        $sum = 0;
+        $found = false;
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                if (is_numeric($item)) {
+                    $sum += (float) $item;
+                    $found = true;
+                }
+                continue;
+            }
+            $value = null;
+            if (isset($item['sub_total']) && $item['sub_total'] !== '' && $item['sub_total'] !== null) {
+                $value = $item['sub_total'];
+            } elseif (isset($item['amount']) && $item['amount'] !== '' && $item['amount'] !== null) {
+                $value = $item['amount'];
+            }
+            if ($value !== null && is_numeric($value)) {
+                $sum += (float) $value;
+                $found = true;
+            }
+        }
+
+        return $found ? (string) round($sum, 2) : '';
+    }
+}
+
 if (!function_exists('is_required')) {
     function is_required($field_name)
     {
@@ -4117,11 +4229,30 @@ if (!function_exists('defaultLogo')) {
 if (!function_exists('defaultUserLogo')) {
     function defaultUserLogo($path)
     {
-        if ($path && file_exists($path)) {
+        if ($path && (file_exists(base_path($path)) || file_exists($path))) {
             return asset($path);
         } else {
             return asset('public/uploads/staff/demo/staff.jpg');
         }
+    }
+}
+
+if (!function_exists('uploadedAsset')) {
+    /**
+     * Resolve an uploaded relative path to a public URL, with a demo fallback.
+     */
+    function uploadedAsset($path, $default = 'public/uploads/staff/demo/staff.jpg')
+    {
+        if (!empty($path) && (file_exists(base_path($path)) || file_exists($path))) {
+            return asset($path);
+        }
+
+        // Path stored but file check failed due to cwd — still prefer non-empty stored path
+        if (!empty($path) && !preg_match('#^https?://#i', $path) && strpos($path, 'demo/') === false) {
+            return asset($path);
+        }
+
+        return asset($default);
     }
 }
 

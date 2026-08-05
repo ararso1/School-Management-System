@@ -31,6 +31,8 @@
             .sticky_card {
                 position: sticky;
                 top: 80px;
+                max-height: calc(100vh - 100px);
+                overflow-y: auto;
             }
             .input-right-icon button.primary-btn-small-input {
                 top: 8px !important;
@@ -138,12 +140,44 @@
                                     $roleId = json_decode($id_card->role_id);
                                 @endphp
 
+                                @if(($id_card->design_mode ?? 'classic') === 'template')
+                                    @include('backEnd.admin.idCard.partials.template_preview', ['id_card' => $id_card])
+                                @else
                                     @include('backEnd.admin.idCard.edit_view_id_card')
                                     @include('backEnd.admin.idCard.guardian_edit_view')
+                                @endif
 
                             @else
-                                @include('backEnd.admin.idCard.add_view_id_card')
-                                @include('backEnd.admin.idCard.guardian_add_view_id_card')
+                                @php $createMode = old('design_mode', 'template'); @endphp
+                                <div id="classicPreviewCreate" class="{{ $createMode === 'template' ? 'd-none' : '' }}">
+                                    @include('backEnd.admin.idCard.add_view_id_card')
+                                    @include('backEnd.admin.idCard.guardian_add_view_id_card')
+                                </div>
+                                <div id="templatePreviewCreate" class="{{ $createMode === 'template' ? '' : 'd-none' }}">
+                                    @php
+                                        $previewCard = (object) [
+                                            'design_mode' => 'template',
+                                            'background_img' => 'public/uploads/studentIdCard/meahadal_front.png',
+                                            'background_img_back' => 'public/uploads/studentIdCard/meahadal_back.png',
+                                            'profile_image' => null,
+                                            'font_family' => 'Segoe UI, Arial, sans-serif',
+                                            'font_color' => '#111111',
+                                            'pl_width' => 86,
+                                            'pl_height' => 49,
+                                            'field_positions' => null,
+                                            'student_name' => 1,
+                                            'admission_no' => 1,
+                                            'class' => 1,
+                                            'gender' => 1,
+                                            'student_address' => 1,
+                                            'admission_date' => 1,
+                                            'guardian_name' => 1,
+                                            'guardian_phone' => 1,
+                                            'show_qr' => 1,
+                                        ];
+                                    @endphp
+                                    @include('backEnd.admin.idCard.partials.template_preview', ['id_card' => $previewCard])
+                                </div>
                             @endif
                         </div>
                     </div>

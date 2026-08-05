@@ -37,16 +37,45 @@
         table {
             width: 100%;
         }
+        .id-card-pair {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        @media print {
+            .id-card-back {
+                page-break-after: always;
+            }
+            input#button, .primary-btn, .no-print {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body id="abc">
         {{-- <input type="button" onclick="printDiv('abc')" id="button" class="primary-btn small fix-gr-bg" value="print" /> --}}
+        <div class="no-print" style="max-width:900px;margin:12px auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" onclick="window.print()" class="primary-btn small fix-gr-bg" style="border:0;cursor:pointer;padding:8px 14px;color:#fff;background:#7c32ff;border-radius:4px;">Print</button>
+            @php
+                $pdfStudentIds = collect($s_students)->pluck('id')->filter()->implode('-');
+            @endphp
+            @if($role_id == 2 && $pdfStudentIds && !empty($id_card->id))
+                <a href="{{ url('generate-id-card-print/'.$pdfStudentIds.'/'.$id_card->id) }}?format=pdf"
+                   class="primary-btn small fix-gr-bg"
+                   style="padding:8px 14px;color:#7c32ff;background:#fff;border:1px solid #7c32ff;border-radius:4px;text-decoration:none;">
+                    Download PDF
+                </a>
+            @endif
+        </div>
 
-                <div class="id_card" id="id_card" style="display: grid !important;grid-template-columns: repeat(3,1fr) !important;grid-gap: {{$gridGap}}px;justify-content: center;">
+                <div class="id_card" id="id_card" style="display: grid !important;grid-template-columns: repeat({{ !empty($id_card->design_mode) && $id_card->design_mode === 'template' ? 1 : 3 }},1fr) !important;grid-gap: {{$gridGap}}px;justify-content: center;">
                         @php
                             $roleId= json_decode($id_card->role_id);
                         @endphp
                         @foreach($s_students as $staff_student)
+                            @if(($id_card->design_mode ?? 'classic') === 'template' && $role_id == 2)
+                                @include('backEnd.admin.idCard.partials.template_card', ['id_card' => $id_card, 'student' => $staff_student, 'role_id' => $role_id])
+                                @continue
+                            @endif
                             @if(!in_array(3,$roleId))
                                 @if($id_card->page_layout_style=='horizontal')
                                     <div id="horizontal" style="margin: 0; padding: 0; font-family: 'Poppins', sans-serif; font-weight: 500;  font-size: 12px; line-height:1.02 ; color: #000">

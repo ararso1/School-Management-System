@@ -59,18 +59,19 @@ class BulkPrintController extends Controller
         $validator = Validator::make($input, [
             'role' => 'required',
             'id_card' => 'required',
-            'grid_gap' => 'required'
+            'grid_gap' => 'required',
+            'output' => 'nullable|in:print,pdf',
         ]);
         if ($validator->fails()) {
             return redirect()->route('student-id-card-bulk-print')
                 ->withErrors($validator)
                 ->withInput();
         }
-        
-        try {  
+
+        try {
         if($request->role==2){
-            $s_students=SmStudent::query()->with('parents', 'bloodGroup');
-            
+            $s_students=SmStudent::query()->with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section');
+
             $s_students = $s_students->status()->get();
         }elseif($request->role==3){
             $studentGuardian = SmStudent::where('school_id', Auth::user()->school_id)->get('parent_id');
@@ -84,11 +85,21 @@ class BulkPrintController extends Controller
         $role_id=$request->role;
 
         $gridGap = $request->grid_gap !=null ? $request->grid_gap :15;
+        if ($request->input('output', 'print') === 'pdf') {
+            set_time_limit(2700);
+            $pdf = Pdf::loadView('backEnd.admin.idCard.student_id_card_pdf', [
+                'id_card' => $id_card,
+                's_students' => $s_students,
+                'role_id' => $role_id,
+                'gridGap' => $gridGap,
+            ]);
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->setOption('isHtml5ParserEnabled', true);
+            $pdf->setOption('isRemoteEnabled', true);
+            return $pdf->download(\Illuminate\Support\Str::slug($id_card->title ?: 'student-id-card') . '.pdf');
+        }
+
         return view('bulkprint::admin.id_card_bulk_print', ['id_card' => $id_card, 's_students' => $s_students,'role_id'=>$role_id,'gridGap'=>$gridGap]);
-        
-    
-        $pdf = Pdf::loadView('bulkprint::admin.id_card_bulk_print', ['id_card' => $id_card, 's_students' => $s_students,'role_id'=>$role_id]);
-        //  return $pdf->stream($id_card->title . '.pdf');
         } catch (\Throwable $th) {
            Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

@@ -26,13 +26,30 @@
             </div>
         </div>
 
+        @php
+            $designMode = old('design_mode', isset($id_card) ? ($id_card->design_mode ?? 'classic') : 'template');
+            if (!class_exists(\App\Helpers\IdCardTemplateHelper::class)) {
+                throw new \RuntimeException('Missing file: app/Helpers/IdCardTemplateHelper.php — upload it to the live server.');
+            }
+            $fieldPositions = \App\Helpers\IdCardTemplateHelper::positions($id_card ?? null);
+        @endphp
+
         <div class="row mt-25">
-            <div class="col-lg-12">
+            <div class="col-lg-6">
+                <div class="primary_input">
+                    <label class="primary_input_label" for="">Design Mode</label>
+                    <select class="primary_select form-control" name="design_mode" id="designMode">
+                        <option value="classic" {{ $designMode == 'classic' ? 'selected' : '' }}>Classic Layout</option>
+                        <option value="template" {{ $designMode == 'template' ? 'selected' : '' }}>Front & Back Template</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-lg-6">
                 <div class="primary_input">
                     <label class="primary_input_label" for="">@lang('admin.layout')</label>
                     <select class="primary_select  form-control{{ $errors->has('page_layout_style') ? ' is-invalid' : '' }}" name="page_layout_style" id="pageLayoutStyle">
                         <option value="horizontal" {{isset($id_card)? ($id_card->page_layout_style == "horizontal"? 'selected':''):''}}>@lang('admin.vertical')</option>
-                        <option value="vertical" {{isset($id_card)? ($id_card->page_layout_style == "vertical"? 'selected':''):''}}>@lang('admin.horizontal')</option>
+                        <option value="vertical" {{isset($id_card)? ($id_card->page_layout_style == "vertical"? 'selected': (old('page_layout_style')=='vertical'?'selected':'')) : 'selected'}}>@lang('admin.horizontal')</option>
                     </select>
 
                     @if ($errors->has('page_layout_style'))
@@ -48,11 +65,11 @@
             <div class="row flex-grow-1 d-flex justify-content-between input-right-icon">
                 <div class="col">
                     <div class="primary_input">
-                        <label class="primary_input_label" for="">@lang('admin.background_image')</label>
+                        <label class="primary_input_label" for="">Front Background Image</label>
                         <input
                             class="primary_input_field form-control{{ $errors->has('background_img') ? ' is-invalid' : '' }}"
                             type="text" id="placeholderFileFiveName"
-                            placeholder="{{ isset($id_card) ? ($id_card->background_img != '' ? getFilePath3($id_card->background_img) : trans('admin.background_image')) : trans('admin.background_image') }}"
+                            placeholder="{{ isset($id_card) ? ($id_card->background_img != '' ? getFilePath3($id_card->background_img) : 'Front background') : 'Front background' }}"
                             readonly>
 
                         @if ($errors->has('background_img'))
@@ -74,6 +91,45 @@
             <button class="primary-btn icon-only fix-gr-bg id_card_button mt-30" type="button" id="deleteBackImg">
                 <span class="ti-trash"></span>
             </button>
+        </div>
+
+        <div class="d-flex mt-25 template-only-field">
+            <div class="row flex-grow-1 d-flex justify-content-between input-right-icon">
+                <div class="col">
+                    <div class="primary_input">
+                        <label class="primary_input_label" for="">Back Background Image</label>
+                        <input
+                            class="primary_input_field form-control"
+                            type="text" id="placeholderFileBackSideName"
+                            placeholder="{{ isset($id_card) && $id_card->background_img_back ? getFilePath3($id_card->background_img_back) : 'Back background' }}"
+                            readonly>
+                    </div>
+                </div>
+                <div class="col-auto mt-30">
+                    <button class="primary-btn-small-input cust-margin id_card_button" type="button">
+                        <label class="primary-btn small fix-gr-bg" for="document_file_back_side">@lang('common.browse')</label>
+                        <input type="file" class="d-none" name="background_img_back" id="document_file_back_side"
+                            onchange="document.getElementById('placeholderFileBackSideName').placeholder=this.value.split('\\').pop()">
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-25 template-only-field">
+            <div class="col-lg-6">
+                <div class="primary_input">
+                    <label class="primary_input_label" for="">Font Family</label>
+                    <input class="primary_input_field form-control" type="text" name="font_family"
+                        value="{{ old('font_family', isset($id_card) ? ($id_card->font_family ?: 'Segoe UI, Arial, sans-serif') : 'Segoe UI, Arial, sans-serif') }}">
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="primary_input">
+                    <label class="primary_input_label" for="">Font Color</label>
+                    <input class="primary_input_field form-control" type="color" name="font_color"
+                        value="{{ old('font_color', isset($id_card) ? ($id_card->font_color ?: '#111111') : '#111111') }}">
+                </div>
+            </div>
         </div>
 
         <div class="row mt-25">
@@ -740,6 +796,304 @@
                 </div>
             </div>
         </div>
+
+        <div class="row mt-25 template-only-field">
+            <div class="col-lg-4 d-flex"><p class="text-uppercase fw-500 mb-10">Gender</p></div>
+            <div class="col-lg-8">
+                <div class="d-flex radio-btn-flex ml-40">
+                    <div class="mr-30">
+                        <input type="radio" name="gender" id="gender_yes" value="1" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->gender ?? 0) == 1 ? 'checked' : '') : 'checked' }}>
+                        <label for="gender_yes">@lang('admin.yes')</label>
+                    </div>
+                    <div class="mr-30">
+                        <input type="radio" name="gender" id="gender_no" value="0" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->gender ?? 0) == 0 ? 'checked' : '') : '' }}>
+                        <label for="gender_no">@lang('admin.none')</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-25 template-only-field">
+            <div class="col-lg-4 d-flex"><p class="text-uppercase fw-500 mb-10">Admission Date</p></div>
+            <div class="col-lg-8">
+                <div class="d-flex radio-btn-flex ml-40">
+                    <div class="mr-30">
+                        <input type="radio" name="admission_date" id="admission_date_yes" value="1" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->admission_date ?? 0) == 1 ? 'checked' : '') : 'checked' }}>
+                        <label for="admission_date_yes">@lang('admin.yes')</label>
+                    </div>
+                    <div class="mr-30">
+                        <input type="radio" name="admission_date" id="admission_date_no" value="0" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->admission_date ?? 0) == 0 ? 'checked' : '') : '' }}>
+                        <label for="admission_date_no">@lang('admin.none')</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-25 template-only-field">
+            <div class="col-lg-4 d-flex"><p class="text-uppercase fw-500 mb-10">Guardian Name</p></div>
+            <div class="col-lg-8">
+                <div class="d-flex radio-btn-flex ml-40">
+                    <div class="mr-30">
+                        <input type="radio" name="guardian_name" id="guardian_name_yes" value="1" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->guardian_name ?? 0) == 1 ? 'checked' : '') : 'checked' }}>
+                        <label for="guardian_name_yes">@lang('admin.yes')</label>
+                    </div>
+                    <div class="mr-30">
+                        <input type="radio" name="guardian_name" id="guardian_name_no" value="0" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->guardian_name ?? 0) == 0 ? 'checked' : '') : '' }}>
+                        <label for="guardian_name_no">@lang('admin.none')</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-25 template-only-field">
+            <div class="col-lg-4 d-flex"><p class="text-uppercase fw-500 mb-10">Guardian Phone</p></div>
+            <div class="col-lg-8">
+                <div class="d-flex radio-btn-flex ml-40">
+                    <div class="mr-30">
+                        <input type="radio" name="guardian_phone" id="guardian_phone_yes" value="1" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->guardian_phone ?? 0) == 1 ? 'checked' : '') : 'checked' }}>
+                        <label for="guardian_phone_yes">@lang('admin.yes')</label>
+                    </div>
+                    <div class="mr-30">
+                        <input type="radio" name="guardian_phone" id="guardian_phone_no" value="0" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->guardian_phone ?? 0) == 0 ? 'checked' : '') : '' }}>
+                        <label for="guardian_phone_no">@lang('admin.none')</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-25 template-only-field">
+            <div class="col-lg-4 d-flex"><p class="text-uppercase fw-500 mb-10">QR Code (Public Profile)</p></div>
+            <div class="col-lg-8">
+                <div class="d-flex radio-btn-flex ml-40">
+                    <div class="mr-30">
+                        <input type="radio" name="show_qr" id="show_qr_yes" value="1" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->show_qr ?? 0) == 1 ? 'checked' : '') : 'checked' }}>
+                        <label for="show_qr_yes">@lang('admin.yes')</label>
+                    </div>
+                    <div class="mr-30">
+                        <input type="radio" name="show_qr" id="show_qr_no" value="0" class="common-radio"
+                            {{ isset($id_card) ? (($id_card->show_qr ?? 0) == 0 ? 'checked' : '') : '' }}>
+                        <label for="show_qr_no">@lang('admin.none')</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="template-only-field mt-40">
+            <h4 class="mb-15">Field Positions (% of card) — Front</h4>
+            <p class="mb-20 text-muted">Adjust Left / Top / Width / Height / Font size (mm). Preview updates live as you type — save when ready.</p>
+            @foreach(['photo' => 'Student Photo', 'student_name' => 'Full Name', 'admission_no' => 'Admission ID', 'class' => 'Classification', 'gender' => 'Gender', 'student_address' => 'Address', 'admission_date' => 'Admission Date', 'footer_id' => 'Footer ID'] as $key => $label)
+                @php $pos = $fieldPositions['front'][$key] ?? []; @endphp
+                <div class="row mb-15 align-items-end js-pos-row" data-side="front" data-field="{{ $key }}">
+                    <div class="col-lg-2"><strong>{{ $label }}</strong></div>
+                    <div class="col-lg-2">
+                        <label>Left %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="left" type="number" step="0.1" name="field_positions[front][{{ $key }}][left]" value="{{ $pos['left'] ?? 0 }}">
+                    </div>
+                    <div class="col-lg-2">
+                        <label>Top %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="top" type="number" step="0.1" name="field_positions[front][{{ $key }}][top]" value="{{ $pos['top'] ?? 0 }}">
+                    </div>
+                    <div class="col-lg-2">
+                        <label>Width %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="width" type="number" step="0.1" name="field_positions[front][{{ $key }}][width]" value="{{ $pos['width'] ?? 0 }}">
+                    </div>
+                    <div class="col-lg-2">
+                        <label>Height %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="height" type="number" step="0.1" name="field_positions[front][{{ $key }}][height]" value="{{ $pos['height'] ?? 0 }}">
+                    </div>
+                    <div class="col-lg-2">
+                        <label>Font mm</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="font_size" type="number" step="0.1" name="field_positions[front][{{ $key }}][font_size]" value="{{ $pos['font_size'] ?? 2.5 }}">
+                    </div>
+                    @if($key !== 'photo' && $key !== 'footer_id')
+                        <div class="col-lg-12 mt-10">
+                            <label>Label text</label>
+                            <input class="primary_input_field form-control js-pos-input" data-prop="label" type="text" name="field_positions[front][{{ $key }}][label]" value="{{ $pos['label'] ?? $label }}">
+                            <input type="hidden" name="field_positions[front][{{ $key }}][show_label]" value="1">
+                            <input type="hidden" name="field_positions[front][{{ $key }}][mask]" value="1">
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+
+            <h4 class="mb-15 mt-30">Field Positions (% of card) — Back</h4>
+            @foreach(['guardian_name' => 'Guardian Name', 'guardian_phone' => 'Guardian Phone', 'qr' => 'QR Code'] as $key => $label)
+                @php $pos = $fieldPositions['back'][$key] ?? []; @endphp
+                <div class="row mb-15 align-items-end js-pos-row" data-side="back" data-field="{{ $key }}">
+                    <div class="col-lg-2"><strong>{{ $label }}</strong></div>
+                    <div class="col-lg-2">
+                        <label>Left %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="left" type="number" step="0.1" name="field_positions[back][{{ $key }}][left]" value="{{ $pos['left'] ?? 0 }}">
+                    </div>
+                    <div class="col-lg-2">
+                        <label>Top %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="top" type="number" step="0.1" name="field_positions[back][{{ $key }}][top]" value="{{ $pos['top'] ?? 0 }}">
+                    </div>
+                    <div class="col-lg-2">
+                        <label>Width %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="width" type="number" step="0.1" name="field_positions[back][{{ $key }}][width]" value="{{ $pos['width'] ?? 0 }}">
+                    </div>
+                    <div class="col-lg-2">
+                        <label>Height %</label>
+                        <input class="primary_input_field form-control js-pos-input" data-prop="height" type="number" step="0.1" name="field_positions[back][{{ $key }}][height]" value="{{ $pos['height'] ?? 0 }}">
+                    </div>
+                    @if($key !== 'qr')
+                        <div class="col-lg-2">
+                            <label>Font mm</label>
+                            <input class="primary_input_field form-control js-pos-input" data-prop="font_size" type="number" step="0.1" name="field_positions[back][{{ $key }}][font_size]" value="{{ $pos['font_size'] ?? 2.5 }}">
+                        </div>
+                        <div class="col-lg-12 mt-10">
+                            <label>Label text</label>
+                            <input class="primary_input_field form-control js-pos-input" data-prop="label" type="text" name="field_positions[back][{{ $key }}][label]" value="{{ $pos['label'] ?? $label }}">
+                            <input type="hidden" name="field_positions[back][{{ $key }}][show_label]" value="1">
+                            <input type="hidden" name="field_positions[back][{{ $key }}][mask]" value="1">
+                        </div>
+                    @else
+                        <input type="hidden" name="field_positions[back][qr][mask]" value="1">
+                    @endif
+                </div>
+            @endforeach
+        </div>
+
+        <script>
+            (function () {
+                function toggleTemplateFields() {
+                    var mode = document.getElementById('designMode');
+                    if (!mode) return;
+                    var show = mode.value === 'template';
+                    document.querySelectorAll('.template-only-field').forEach(function (el) {
+                        el.style.display = show ? '' : 'none';
+                    });
+                    var classicCreate = document.getElementById('classicPreviewCreate');
+                    var templateCreate = document.getElementById('templatePreviewCreate');
+                    if (classicCreate && templateCreate) {
+                        classicCreate.classList.toggle('d-none', show);
+                        templateCreate.classList.toggle('d-none', !show);
+                    }
+                }
+
+                function previewTargets() {
+                    return document.querySelectorAll('.id-card-template-preview .js-preview-field');
+                }
+
+                function findPreviewField(side, field) {
+                    return document.querySelector(
+                        '.id-card-template-preview .js-preview-field[data-side="' + side + '"][data-field="' + field + '"]'
+                    );
+                }
+
+                function applyPositionFromRow(row) {
+                    if (!row) return;
+                    var side = row.getAttribute('data-side');
+                    var field = row.getAttribute('data-field');
+                    var el = findPreviewField(side, field);
+                    if (!el) return;
+
+                    var get = function (prop) {
+                        var input = row.querySelector('.js-pos-input[data-prop="' + prop + '"]');
+                        return input ? input.value : '';
+                    };
+
+                    var left = get('left');
+                    var top = get('top');
+                    var width = get('width');
+                    var height = get('height');
+                    var fontSize = get('font_size');
+                    var label = get('label');
+
+                    if (left !== '') el.style.left = left + '%';
+                    if (top !== '') el.style.top = top + '%';
+                    if (width !== '') el.style.width = width + '%';
+                    if (height !== '') el.style.height = height + '%';
+                    if (fontSize !== '' && field !== 'photo' && field !== 'qr') {
+                        el.style.fontSize = fontSize + 'mm';
+                    }
+                    if (label !== '' && label !== null) {
+                        var labelEl = el.querySelector('.js-preview-label');
+                        if (labelEl) labelEl.textContent = label + ':';
+                    }
+                }
+
+                function applyAllPositions() {
+                    document.querySelectorAll('.js-pos-row').forEach(applyPositionFromRow);
+                }
+
+                function applyCardSizeAndFont() {
+                    var w = document.querySelector('input[name="pl_width"]');
+                    var h = document.querySelector('input[name="pl_height"]');
+                    var font = document.querySelector('input[name="font_family"]');
+                    var color = document.querySelector('input[name="font_color"]');
+                    var widthVal = w && w.value ? w.value : 86;
+                    var heightVal = h && h.value ? h.value : 49;
+
+                    document.querySelectorAll('.id-card-template-preview .js-id-card-side').forEach(function (side) {
+                        side.style.width = widthVal + 'mm';
+                        side.style.minHeight = heightVal + 'mm';
+                        side.style.aspectRatio = widthVal + '/' + heightVal;
+                        if (font && font.value) side.style.fontFamily = font.value;
+                        if (color && color.value) side.style.color = color.value;
+                    });
+                }
+
+                function bindLivePreview() {
+                    document.querySelectorAll('.js-pos-input').forEach(function (input) {
+                        input.addEventListener('input', function () {
+                            applyPositionFromRow(input.closest('.js-pos-row'));
+                        });
+                        input.addEventListener('change', function () {
+                            applyPositionFromRow(input.closest('.js-pos-row'));
+                        });
+                    });
+
+                    ['pl_width', 'pl_height', 'font_family', 'font_color'].forEach(function (name) {
+                        var el = document.querySelector('input[name="' + name + '"]');
+                        if (!el) return;
+                        el.addEventListener('input', applyCardSizeAndFont);
+                        el.addEventListener('change', applyCardSizeAndFont);
+                    });
+
+                    // Keep preview in sync if back image browse updates placeholder only
+                    var backFile = document.getElementById('document_file_back_side');
+                    if (backFile) {
+                        backFile.addEventListener('change', function () {
+                            if (!this.files || !this.files[0]) return;
+                            var url = URL.createObjectURL(this.files[0]);
+                            document.querySelectorAll('.id-card-template-preview .id-card-back').forEach(function (side) {
+                                side.style.backgroundImage = 'url(' + url + ')';
+                            });
+                        });
+                    }
+                    var frontFile = document.getElementById('document_file_5');
+                    if (frontFile) {
+                        frontFile.addEventListener('change', function () {
+                            if (!this.files || !this.files[0]) return;
+                            var url = URL.createObjectURL(this.files[0]);
+                            document.querySelectorAll('.id-card-template-preview .id-card-front').forEach(function (side) {
+                                side.style.backgroundImage = 'url(' + url + ')';
+                            });
+                        });
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    toggleTemplateFields();
+                    var mode = document.getElementById('designMode');
+                    if (mode) mode.addEventListener('change', toggleTemplateFields);
+                    bindLivePreview();
+                    applyAllPositions();
+                    applyCardSizeAndFont();
+                });
+            })();
+        </script>
 
         @php
             $tooltip = '';

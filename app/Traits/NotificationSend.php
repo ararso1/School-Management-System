@@ -220,7 +220,7 @@ trait NotificationSend
         }
 
         $templete = $notificationData->template[$role]['SMS'];
-        $body = SmsTemplate::smsTempleteToBody($templete, $data);
+        $body = SmNotificationSetting::templeteData($templete, $data);
 
         try {
             if ($activeSmsGateway->gateway_name == 'Twilio') {

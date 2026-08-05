@@ -44,7 +44,7 @@ class SmNotificationSetting extends Model
         $body = str_replace('[item]', @$data['item'], $body);
         $body = str_replace('[quantity]', @$data['quantity'], $body);
         $body = str_replace('[amount]', @$data['amount'], $body);
-        $body = str_replace('[fees]', @$data['fees'], $body);
+        $body = replaceFeePlaceholders($body, $data);
         if (@$data['attendance_type'] == "P") {
             $body = str_replace('[attendance_type]', "Present", $body);
         } elseif (@$data['attendance_type'] == "L") {

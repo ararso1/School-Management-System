@@ -554,10 +554,16 @@ class FeesController extends Controller
                 $data['student_name'] = $student->studentDetail->full_name;
 
                 if ($request->types) {
-                    $data['fees']         = is_array($tsub_total) ? (string) $tsub_total[0] : (string) $tsub_total;
-                } elseif($request->groups) {
-                    $data['fees']         = is_array($sub_total) ? (string) $sub_total[0] : (string) $sub_total;
+                    $data['fees'] = sumFeeRequestAmounts($request->types)
+                        ?: (is_array($tsub_total ?? null) ? (string) array_sum(array_map('floatval', $tsub_total)) : (string) ($tsub_total ?? ''));
+                } elseif ($request->groups) {
+                    $data['fees'] = sumFeeRequestAmounts($request->groups)
+                        ?: (is_array($sub_total ?? null) ? (string) array_sum(array_map('floatval', $sub_total)) : (string) ($sub_total ?? ''));
+                } else {
+                    $data['fees'] = '';
                 }
+                $data['fee'] = $data['fees'];
+                $data['amount'] = $data['fees'];
 
                 try{
                     $this->sent_notifications('Fees_Assign', [$student_user_id], $data, ['Student', 'Parent']);
@@ -708,7 +714,18 @@ class FeesController extends Controller
                     
                     $student_user_id      = SmStudent::find($student->student_id)->user_id;
                     $data['student_name'] = $student->studentDetail->full_name;
-                    $data['fees']         = is_array($tsub_total) ? (string) $tsub_total[0] : (string) $tsub_total;
+                    if ($request->types) {
+                        $data['fees'] = sumFeeRequestAmounts($request->types)
+                            ?: (is_array($tsub_total ?? null) ? (string) array_sum(array_map('floatval', $tsub_total)) : (string) ($tsub_total ?? ''));
+                    } elseif ($request->groups) {
+                        $data['fees'] = sumFeeRequestAmounts($request->groups)
+                            ?: (is_array($sub_total ?? null) ? (string) array_sum(array_map('floatval', $sub_total)) : (string) ($sub_total ?? ''));
+                    } else {
+                        $data['fees'] = sumFeeRequestAmounts($request->types)
+                            ?: (is_array($tsub_total ?? null) ? (string) array_sum(array_map('floatval', (array) ($tsub_total ?? []))) : (string) ($tsub_total ?? ''));
+                    }
+                    $data['fee'] = $data['fees'];
+                    $data['amount'] = $data['fees'];
                     
                     try{
                         $this->sent_notifications('Fees_Assign', [$student_user_id], $data, ['Student', 'Parent']);
@@ -1102,7 +1119,19 @@ class FeesController extends Controller
             // sendNotification("Add Fees Payment", null, $student->parents->user_id, 3);
 
             $student_user_id = $student->user_id;
-            $data['fees'] = $request->total_paid_amount;
+            $paidAmount = $request->total_paid_amount;
+            if ($paidAmount === null || $paidAmount === '') {
+                $paidAmount = is_array($request->paid_amount)
+                    ? array_sum(array_map('floatval', (array) $request->paid_amount))
+                    : $request->paid_amount;
+            }
+            $data = [
+                'student_name' => $student->full_name,
+                'fees' => $paidAmount,
+                'fee' => $paidAmount,
+                'amount' => $paidAmount,
+                'total_paid' => $paidAmount,
+            ];
             try{
                 $this->sent_notifications('Fees_Payment', [$student_user_id], $data, ['Student', 'Parent']);
             }catch(\Exception $e){
@@ -1242,7 +1271,10 @@ class FeesController extends Controller
             $data = [];
             $student_user_id      = SmStudent::find($transcationInfo->student_id)->user_id;
             $data['student_name'] = $student->full_name;
-            $data['amount']       = $total_paid_amount;
+            $data['amount']       = $total_paid_amount ?: $transcationInfo->total_paid_amount;
+            $data['fees']         = $data['amount'];
+            $data['fee']          = $data['amount'];
+            $data['total_paid']   = $data['amount'];
             try{
                 $this->sent_notifications('Approve_Deposit', [$student_user_id], $data, ['Student', 'Parent']);
             }
@@ -1276,6 +1308,9 @@ class FeesController extends Controller
             $student_user_id      = SmStudent::find($transcation->student_id)->user_id;
             $data['student_name'] = $student->full_name;
             $data['amount']       = $transcation->total_paid_amount;
+            $data['fees']         = $data['amount'];
+            $data['fee']          = $data['amount'];
+            $data['total_paid']   = $data['amount'];
             try{
                 $this->sent_notifications('Reject_Deposit', [$student_user_id], $data, ['Student', 'Parent']);
             }

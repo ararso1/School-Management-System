@@ -187,6 +187,17 @@
                             @endif
     
                             <li class="nav-item edit-button">
+                                @php
+                                    $studentIdCards = \App\Helpers\IdCardTemplateHelper::cardsForRole(2);
+                                @endphp
+                                @if ($studentIdCards->isNotEmpty())
+                                    <a href="{{ route('student_id_card_view', [@$student_detail->id]) }}"
+                                        class="primary-btn small fix-gr-bg" target="_blank">ID Card</a>
+                                    <a href="{{ route('student_id_card_print', [@$student_detail->id]) }}"
+                                        class="primary-btn small fix-gr-bg" target="_blank">Print ID</a>
+                                    <a href="{{ route('student_id_card_download', [@$student_detail->id]) }}"
+                                        class="primary-btn small fix-gr-bg">PDF</a>
+                                @endif
                                 @if (userPermission('student_edit'))
                                     <a href="{{ route('student_edit', [@$student_detail->id]) }}"
                                         class="primary-btn small fix-gr-bg">@lang('common.edit')

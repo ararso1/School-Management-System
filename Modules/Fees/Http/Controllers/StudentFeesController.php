@@ -414,7 +414,19 @@ class StudentFeesController extends Controller
 
 
             $student_user_id = $student->user_id;
-            $data['fees'] = $request->total_paid_amount;
+            $paidAmount = $request->total_paid_amount;
+            if ($paidAmount === null || $paidAmount === '') {
+                $paidAmount = is_array($request->paid_amount)
+                    ? array_sum(array_map('floatval', (array) $request->paid_amount))
+                    : $request->paid_amount;
+            }
+            $data = [
+                'student_name' => $student->full_name,
+                'fees' => $paidAmount,
+                'fee' => $paidAmount,
+                'amount' => $paidAmount,
+                'total_paid' => $paidAmount,
+            ];
             try{
                 $this->sent_notifications('Fees_Payment', [$student_user_id], $data, ['Student', 'Parent']);
             }catch(\Exception $e){

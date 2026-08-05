@@ -82,7 +82,7 @@
     
                                             {{-- Preview Modal Start --}}
                                             <div class="modal fade admin-query" id="previewIdCard{{$id_card->id}}">
-                                                <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-dialog modal-dialog-centered {{ ($id_card->design_mode ?? 'classic') === 'template' ? 'modal-lg' : '' }}">
                                                     <div class="modal-content">
                                                         <div class="modal-header">
                                                             <h4 class="modal-title">{{$id_card->title}}</h4>
@@ -92,7 +92,9 @@
                                                             @php
                                                                 $roleId= json_decode($id_card->role_id);
                                                             @endphp
-                                                            @if(!in_array(3,$roleId))
+                                                            @if(($id_card->design_mode ?? 'classic') === 'template')
+                                                                @include('backEnd.admin.idCard.partials.template_preview', ['id_card' => $id_card])
+                                                            @elseif(!in_array(3,$roleId))
                                                                 @if($id_card->page_layout_style=='horizontal')
                                                                     <div id="horizontal" style="margin: 0; padding: 0; font-family: 'Poppins', sans-serif; font-weight: 500;  font-size: 12px; line-height:1.02 ; color: #000">
                                                                         <div class="horizontal__card" style="line-height:1.02; background-image: url({{ @$id_card->background_img != "" ? asset(@$id_card->background_img) : asset('public/backEnd/id_card/img/vertical_bg.png') }}); width: {{!empty($id_card->pl_width) ? $id_card->pl_width : 57.15}}mm; height: {{!empty($id_card->pl_height) ? $id_card->pl_height : 88.89999999999999}}mm; margin: auto; background-size: 100% 100%; background-position: center center; position: relative; background-color: #fff;">

@@ -42,7 +42,7 @@
             <div class="profile_details_header">
                 <div class="d-flex justify-content-between align-items-center gap-10 flex-wrap flex-sm-nowrap">
                     <div class="d-flex align-items-center">
-                        <img src="{{ file_exists($singleStudent->student_photo) ? asset($singleStudent->student_photo) : asset('public/uploads/staff/demo/staff.jpg') }}"
+                        <img src="{{ uploadedAsset($singleStudent->student_photo, 'public/uploads/staff/demo/staff.jpg') }}"
                             class="user_photo" alt="user photo">
                         <div class="user_information">
                             <p class="single_header_info">
@@ -166,6 +166,41 @@
                 </div>
                 <div class="details_info_section">
                     <h4 class="sectoin_header">@lang('edulia.parent_info')</h4>
+                    <div class="row m-0 parent_photo_row mb-3">
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{ uploadedAsset(optional($singleStudent->parents)->fathers_photo, 'public/uploads/staff/demo/father.png') }}"
+                                    class="user_photo" style="width:72px;height:72px;object-fit:cover;border-radius:8px;"
+                                    alt="{{ optional($singleStudent->parents)->fathers_name }}">
+                                <div>
+                                    <span class="info_type d-block">@lang('edulia.fathers_name')</span>
+                                    <span class="info_value text-uppercase">{{ optional($singleStudent->parents)->fathers_name ?: 'N/A' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{ uploadedAsset(optional($singleStudent->parents)->mothers_photo, 'public/uploads/staff/demo/mother.jpg') }}"
+                                    class="user_photo" style="width:72px;height:72px;object-fit:cover;border-radius:8px;"
+                                    alt="{{ optional($singleStudent->parents)->mothers_name }}">
+                                <div>
+                                    <span class="info_type d-block">@lang('edulia.mothers_name')</span>
+                                    <span class="info_value text-uppercase">{{ optional($singleStudent->parents)->mothers_name ?: 'N/A' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="{{ uploadedAsset(optional($singleStudent->parents)->guardians_photo, 'public/uploads/staff/demo/guardian.jpg') }}"
+                                    class="user_photo" style="width:72px;height:72px;object-fit:cover;border-radius:8px;"
+                                    alt="{{ optional($singleStudent->parents)->guardians_name }}">
+                                <div>
+                                    <span class="info_type d-block">@lang('edulia.guardian_name')</span>
+                                    <span class="info_value text-uppercase">{{ optional($singleStudent->parents)->guardians_name ?: 'N/A' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="row m-0">
                         <p class="single_info col-md-4">
                             <span class="info_type">@lang('edulia.fathers_name'): </span>

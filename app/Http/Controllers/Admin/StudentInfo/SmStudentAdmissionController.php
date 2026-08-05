@@ -192,12 +192,16 @@ class SmStudentAdmissionController extends Controller
         $destination = 'public/uploads/student/document/';
         $student_file_destination = 'public/uploads/student/';
 
+        $fathers_photo = session()->get('fathers_photo') ?: fileUpload($request->file('fathers_photo'), $student_file_destination);
+        $mothers_photo = session()->get('mothers_photo') ?: fileUpload($request->file('mothers_photo'), $student_file_destination);
+        $guardians_photo_upload = session()->get('guardians_photo') ?: fileUpload($request->file('guardians_photo'), $student_file_destination);
+
         if ($request->relation == 'Father') {
-            $guardians_photo = session()->get('fathers_photo');
+            $guardians_photo = $fathers_photo ?: $guardians_photo_upload;
         } elseif ($request->relation == 'Mother') {
-            $guardians_photo = session()->get('mothers_photo');
+            $guardians_photo = $mothers_photo ?: $guardians_photo_upload;
         } else {
-            $guardians_photo = session()->get('guardians_photo');
+            $guardians_photo = $guardians_photo_upload;
         }
 
 
@@ -260,11 +264,11 @@ class SmStudentAdmissionController extends Controller
                     $parent->fathers_name = $request->fathers_name;
                     $parent->fathers_mobile = $request->fathers_phone;
                     $parent->fathers_occupation = $request->fathers_occupation;
-                    $parent->fathers_photo = session()->get('fathers_photo') ?? fileUpload($request->file('fathers_photo'), $student_file_destination);
+                    $parent->fathers_photo = $fathers_photo;
                     $parent->mothers_name = $request->mothers_name;
                     $parent->mothers_mobile = $request->mothers_phone;
                     $parent->mothers_occupation = $request->mothers_occupation;
-                    $parent->mothers_photo = session()->get('mothers_photo') ?? fileUpload($request->file('mothers_photo'), $student_file_destination);
+                    $parent->mothers_photo = $mothers_photo;
                     $parent->guardians_name = $request->guardians_name;
                     $parent->guardians_mobile = $request->guardians_phone;
                     $parent->guardians_email = $request->guardians_email;
@@ -536,17 +540,20 @@ class SmStudentAdmissionController extends Controller
         $destination = 'public/uploads/student/document/';
         $student_file_destination = 'public/uploads/student/';
         $student = SmStudent::find($request->id);
-        if ($request->relation == 'Father') {
-            $guardians_photo = fileUpdate($student->parents->guardians_photo, $request->fathers_photo, $student_file_destination);
-        } elseif ($request->relation == 'Mother') {
-            if($request->mothers_photo != null) {
-                $guardians_photo = fileUpdate($student->parents->guardians_photo, $request->mothers_photo, $student_file_destination);
-            }
-        } else {
-            if($request->guardians_photo != null) {
-                $guardians_photo = fileUpdate($student->parents->guardians_photo, $request->guardians_photo, $student_file_destination);
-            }
+        $existingGuardianPhoto = optional($student->parents)->guardians_photo;
+        $guardians_photo = $existingGuardianPhoto;
+
+        if ($request->relation == 'Father' && $request->fathers_photo != null) {
+            $guardians_photo = fileUpdate($existingGuardianPhoto, $request->fathers_photo, $student_file_destination);
+        } elseif ($request->relation == 'Mother' && $request->mothers_photo != null) {
+            $guardians_photo = fileUpdate($existingGuardianPhoto, $request->mothers_photo, $student_file_destination);
+        } elseif ($request->guardians_photo != null) {
+            $guardians_photo = fileUpdate($existingGuardianPhoto, $request->guardians_photo, $student_file_destination);
         }
+
+        $guardianPhotoChanged = ($request->relation == 'Father' && $request->fathers_photo != null)
+            || ($request->relation == 'Mother' && $request->mothers_photo != null)
+            || ($request->guardians_photo != null);
 
         DB::beginTransaction();
         try {
@@ -609,7 +616,7 @@ class SmStudentAdmissionController extends Controller
                     $parent->guardians_occupation = $request->guardians_occupation;
                     $parent->guardians_relation = $request->relation;
                     $parent->relation = $request->relationButton;
-                    if($request->guardians_photo != null) {
+                    if ($guardianPhotoChanged) {
                         $parent->guardians_photo = $guardians_photo;
                     }
                     $parent->guardians_address = $request->guardians_address;

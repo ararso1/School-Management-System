@@ -10,7 +10,7 @@
 <div class="student-meta-top"></div>
 @if (is_show('photo'))
     <img class="student-meta-img img-100"
-        src="{{ file_exists(@$student_detail->student_photo) ? asset($student_detail->student_photo) : asset('public/uploads/staff/demo/staff.jpg') }}"
+        src="{{ uploadedAsset(@$student_detail->student_photo, 'public/uploads/staff/demo/staff.jpg') }}"
         alt="">
 @endif
 

@@ -19,6 +19,12 @@
         table tr td{
             border: 0 !important; 
         }
+        .no-print, input#button {
+            display: none !important;
+        }
+        .id-card-back {
+            page-break-after: always;
+        }
 
     </style>
     <style>
@@ -43,11 +49,27 @@ table {
     </style>
 </head>
 <body id="abc">
-        <input type="button" onclick="printDiv('abc')" id="button" class="primary-btn small fix-gr-bg" value="print" />
+        <div class="no-print" style="max-width:900px;margin:12px auto;display:flex;gap:8px;flex-wrap:wrap;">
+            <input type="button" onclick="printDiv('abc')" id="button" class="primary-btn small fix-gr-bg" value="Print" />
+            @php
+                $pdfStudentIds = collect($students)->pluck('id')->filter()->implode('-');
+            @endphp
+            @if($pdfStudentIds && !empty($id_card->id))
+                <a href="{{ url('generate-id-card-print/'.$pdfStudentIds.'/'.$id_card->id) }}?format=pdf"
+                   class="primary-btn small fix-gr-bg"
+                   style="padding:8px 14px;color:#7c32ff;background:#fff;border:1px solid #7c32ff;border-radius:4px;text-decoration:none;line-height:28px;">
+                    Download PDF
+                </a>
+            @endif
+        </div>
     {{-- <table style="height: 800px">
             <tr>  --}}
-                <div class="id_card" id="id_card" style="display: grid !important;grid-template-columns: repeat(3,1fr) !important;grid-gap: 20px;justify-content: center;">
+                <div class="id_card" id="id_card" style="display: grid !important;grid-template-columns: repeat({{ ($id_card->design_mode ?? 'classic') === 'template' ? 1 : 3 }},1fr) !important;grid-gap: 20px;justify-content: center;">
                     @foreach($students as $student)
+                        @if(($id_card->design_mode ?? 'classic') === 'template')
+                            @include('backEnd.admin.idCard.partials.template_card', ['id_card' => $id_card, 'student' => $student, 'role_id' => 2])
+                            @continue
+                        @endif
     			     <table cellpadding="0" cellspacing="0" border="0" width="156" height="241" align="center" style=" border: 1px solid var(--border_color); margin: 0px 0 0 0;" >
                         <tr style="border-right: 1px solid #ddd; border-left: 1px solid #ddd;  height: 0px; ">
                             <td colspan="3" style=" position: relative; text-align: center; background-color: #c738d8; border:1px solid #c738d8">

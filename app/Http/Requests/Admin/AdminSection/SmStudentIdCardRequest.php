@@ -47,7 +47,16 @@ class SmStudentIdCardRequest extends FormRequest
             'dob'=>'nullable',
             'blood' =>'nullable',
             'phone_number'=>'nullable',
+            'design_mode' => 'nullable|in:classic,template',
+            'gender' => 'nullable',
+            'admission_date' => 'nullable',
+            'guardian_name' => 'nullable',
+            'guardian_phone' => 'nullable',
+            'show_qr' => 'nullable',
+            'font_family' => 'nullable|string|max:120',
+            'font_color' => 'nullable|string|max:30',
             'background_img'=> 'nullable|image|mimes:jpeg,png,jpg,svg|max:'.$maxFileSize,
+            'background_img_back'=> 'nullable|image|mimes:jpeg,png,jpg,svg|max:'.$maxFileSize,
             'profile_image'=> 'nullable|image|mimes:jpeg,png,jpg,svg|max:'.$maxFileSize,
             'logo'=> 'nullable|image|mimes:jpeg,png,jpg,svg|max:'.$maxFileSize,
             'signature'=> 'nullable|image|mimes:jpeg,png,jpg,svg|max:'.$maxFileSize,
@@ -57,7 +66,11 @@ class SmStudentIdCardRequest extends FormRequest
             $rules['signature'] = 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg|max:'.$maxFileSize;
         } else {
             $rules['logo'] = 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg|max:'.$maxFileSize;
-            $rules['signature'] = 'required|image|mimes:jpeg,png,jpg,gif,svg|max:'.$maxFileSize;
+            if (($this->design_mode ?? 'classic') === 'template') {
+                $rules['signature'] = 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:'.$maxFileSize;
+            } else {
+                $rules['signature'] = 'required|image|mimes:jpeg,png,jpg,gif,svg|max:'.$maxFileSize;
+            }
         }
 
         return $rules;

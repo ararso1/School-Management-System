@@ -12,10 +12,12 @@ use App\YearCheck;
 use App\SmStudentIdCard;
 use App\SmGeneralSettings;
 use Illuminate\Http\Request;
+use App\Helpers\IdCardTemplateHelper;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\Controller;
 use Brian2694\Toastr\Facades\Toastr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Modules\RolePermission\Entities\InfixRole;
 use App\Http\Requests\Admin\AdminSection\SmStudentIdCardRequest;
 
@@ -44,10 +46,43 @@ class SmStudentIdCardController extends Controller
             $roles = InfixRole::select('*')->where('is_saas',0)->where('id', '!=', 1)->where(function ($q) {
                 $q->where('school_id', Auth::user()->school_id)->orWhere('type', 'System');
             })->get();
-            return view('backEnd.admin.idCard.student_id_card', compact('id_cards','roles'));
-        } catch (\Exception $e) {
-            Toastr::error('Operation Failed', 'Failed');
-            return redirect()->back();
+            // Render inside try/catch so Blade/helper fatals are logged (view errors otherwise happen after return).
+            $html = view('backEnd.admin.idCard.student_id_card', compact('id_cards','roles'))->render();
+            return response($html);
+        } catch (\Throwable $e) {
+            \Log::error('create-id-card failed: '.$e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            Toastr::error('Operation Failed: '.$e->getMessage(), 'Failed');
+            return redirect()->route('student-id-card');
+        }
+    }
+
+    public function edit($id)
+    {
+        try {
+            $roles = InfixRole::select('*')->where('is_saas',0)->where(function ($q) {
+                $q->where('school_id', Auth::user()->school_id)->orWhere('type', 'System');
+            })->get();
+            $id_cards = SmStudentIdCard::status()->get();
+            $id_card = SmStudentIdCard::status()->find($id);
+
+            if (!$id_card) {
+                Toastr::error('ID Card not found', 'Failed');
+                return redirect()->route('student-id-card');
+            }
+
+            $html = view('backEnd.admin.idCard.student_id_card', compact('id_cards', 'roles', 'id_card'))->render();
+            return response($html);
+        } catch (\Throwable $e) {
+            \Log::error('edit-id-card failed: '.$e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            Toastr::error('Operation Failed: '.$e->getMessage(), 'Failed');
+            return redirect()->route('student-id-card');
         }
     }
 
@@ -66,6 +101,7 @@ class SmStudentIdCardController extends Controller
             }        
             $id_card->signature = fileUpload($request->signature, $destination);          
             $id_card->background_img = fileUpload($request->background_img,$destination); 
+            $id_card->background_img_back = fileUpload($request->background_img_back, $destination);
             $id_card->profile_image = fileUpload($request->profile_image,$destination);           
             if(in_array(2, $request->applicable_user) || in_array(3, $request->applicable_user)){
                 $id_card->role_id = json_encode($request->applicable_user);
@@ -74,6 +110,7 @@ class SmStudentIdCardController extends Controller
             }
             
             $id_card->page_layout_style = $request->page_layout_style;
+            $id_card->design_mode = $request->design_mode ?? 'classic';
             $id_card->user_photo_style = $request->user_photo_style;
             $id_card->user_photo_width = $request->user_photo_width;
             $id_card->user_photo_height = $request->user_photo_height;
@@ -99,6 +136,14 @@ class SmStudentIdCardController extends Controller
             $id_card->student_address = $request->student_address;
             $id_card->dob = $request->dob;
             $id_card->blood = $request->blood;
+            $id_card->gender = $request->gender ?? 0;
+            $id_card->admission_date = $request->admission_date ?? 0;
+            $id_card->guardian_name = $request->guardian_name ?? 0;
+            $id_card->guardian_phone = $request->guardian_phone ?? 0;
+            $id_card->show_qr = $request->show_qr ?? 0;
+            $id_card->font_family = $request->font_family;
+            $id_card->font_color = $request->font_color;
+            $id_card->field_positions = json_decode(\App\Helpers\IdCardTemplateHelper::mergePositionsFromRequest($request->field_positions ?? []), true);
             if (in_array(3, $request->applicable_user)) {
                 $id_card->phone_number = $request->phone_number;
             }
@@ -114,21 +159,6 @@ class SmStudentIdCardController extends Controller
         }
     }
 
-    public function edit($id)
-    {
-        try {
-            $id_cards = SmStudentIdCard::get();
-            $roles = InfixRole::select('*')->where('is_saas',0)->where('id', '!=', 1)->where(function ($q) {
-                $q->where('school_id', Auth::user()->school_id)->orWhere('type', 'System');
-            })->get();
-            $id_card = SmStudentIdCard::find($id);
-            return view('backEnd.admin.idCard.student_id_card', compact('id_cards', 'id_card','roles'));
-        } catch (\Exception $e) {
-            Toastr::error('Operation Failed', 'Failed');
-            return redirect()->back();
-        }
-    }
-
     public function update(SmStudentIdCardRequest $request, $id)
     {
         try {
@@ -137,6 +167,7 @@ class SmStudentIdCardController extends Controller
             $id_card->title = $request->title;
             $id_card->logo = fileUpdate($id_card->logo,$request->logo,$destination);          
             $id_card->background_img = fileUpdate($id_card->background_img,$request->background_img,$destination);          
+            $id_card->background_img_back = fileUpdate($id_card->background_img_back, $request->background_img_back, $destination);
             $id_card->profile_image = fileUpdate($id_card->profile_image,$request->profile_image,$destination);
             if(in_array(2, $request->applicable_user) || in_array(3, $request->applicable_user)){
                 $id_card->role_id = json_encode($request->applicable_user);
@@ -145,6 +176,7 @@ class SmStudentIdCardController extends Controller
             }
             $id_card->signature = fileUpdate($id_card->signature,$request->signature,$destination);
             $id_card->page_layout_style = $request->page_layout_style;
+            $id_card->design_mode = $request->design_mode ?? $id_card->design_mode ?? 'classic';
             $id_card->user_photo_style = $request->user_photo_style;
             $id_card->user_photo_width = $request->user_photo_width;
             $id_card->user_photo_height = $request->user_photo_height;
@@ -162,6 +194,14 @@ class SmStudentIdCardController extends Controller
             $id_card->student_address = $request->student_address;
             $id_card->dob = $request->dob;
             $id_card->blood = $request->blood;
+            $id_card->gender = $request->gender ?? 0;
+            $id_card->admission_date = $request->admission_date ?? 0;
+            $id_card->guardian_name = $request->guardian_name ?? 0;
+            $id_card->guardian_phone = $request->guardian_phone ?? 0;
+            $id_card->show_qr = $request->show_qr ?? 0;
+            $id_card->font_family = $request->font_family;
+            $id_card->font_color = $request->font_color;
+            $id_card->field_positions = json_decode(\App\Helpers\IdCardTemplateHelper::mergePositionsFromRequest($request->field_positions ?? []), true);
             if (moduleStatusCheck('University')) {
                 $id_card->un_session = $request->un_session_id;
                 $id_card->un_faculty = $request->un_faculty_id;
@@ -203,6 +243,10 @@ class SmStudentIdCardController extends Controller
                 unlink($id_card->background_img);
             }
 
+            if (!empty($id_card->background_img_back) && file_exists($id_card->background_img_back)) {
+                unlink($id_card->background_img_back);
+            }
+
             $id_card->delete();
             Toastr::success('Operation successful', 'Success');
             return redirect('student-id-card');
@@ -231,6 +275,7 @@ class SmStudentIdCardController extends Controller
             'role' => 'required',
             'id_card' => 'required',
             'grid_gap' => 'required',
+            'output' => 'nullable|in:print,pdf',
         ]);
         if ($request->role==2) {
             $s_students = SmStudent::when($request->class, function($q) use($request){
@@ -243,7 +288,7 @@ class SmStudentIdCardController extends Controller
                         $query->where('section_id', $request->section);
                     });
                 })
-                ->with('parents', 'bloodGroup')
+                ->with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section')
                 ->get();
         } elseif ($request->role==3) {
             $studentGuardian = SmStudent::get('parent_id');
@@ -255,11 +300,94 @@ class SmStudentIdCardController extends Controller
 
         $role_id = $request->role;
         $gridGap = $request->grid_gap;
+        $output = $request->input('output', 'print');
 
-        return view('backEnd.admin.idCard.student_id_card_print_bulk', ['id_card' => $id_card, 's_students' => $s_students,'role_id'=>$role_id,'gridGap'=>$gridGap]);
+        if ($output === 'pdf') {
+            return $this->streamIdCardsPdf($id_card, $s_students, $role_id, $gridGap);
+        }
 
-        $pdf = Pdf::loadView('backEnd.admin.student_id_card_print_2', ['id_card' => $id_card, 's_students' => $s_students]);
-        return $pdf->stream($id_card->title . '.pdf');
+        return view('backEnd.admin.idCard.student_id_card_print_bulk', [
+            'id_card' => $id_card,
+            's_students' => $s_students,
+            'role_id' => $role_id,
+            'gridGap' => $gridGap,
+        ]);
+    }
+
+    public function studentIdCardView(Request $request, $id)
+    {
+        try {
+            $student = SmStudent::with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section')
+                ->findOrFail($id);
+            $id_cards = IdCardTemplateHelper::cardsForRole(2);
+            if ($id_cards->isEmpty()) {
+                Toastr::error('No active student ID card template found', 'Failed');
+                return redirect()->route('student_view', $id);
+            }
+
+            $cardId = $request->get('id_card');
+            $id_card = $cardId
+                ? SmStudentIdCard::status()->find($cardId)
+                : IdCardTemplateHelper::defaultCardForStudent(2);
+
+            if (!$id_card) {
+                Toastr::error('Selected ID card template not found', 'Failed');
+                return redirect()->route('student_view', $id);
+            }
+
+            $autoPrint = (bool) $request->boolean('print');
+
+            return view('backEnd.admin.idCard.student_id_card_single', compact('student', 'id_card', 'id_cards', 'autoPrint'));
+        } catch (\Exception $e) {
+            Toastr::error('Operation Failed', 'Failed');
+            return redirect()->back();
+        }
+    }
+
+    public function studentIdCardDownload(Request $request, $id)
+    {
+        try {
+            $student = SmStudent::with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section')
+                ->findOrFail($id);
+
+            $cardId = $request->get('id_card');
+            $id_card = $cardId
+                ? SmStudentIdCard::status()->find($cardId)
+                : IdCardTemplateHelper::defaultCardForStudent(2);
+
+            if (!$id_card) {
+                Toastr::error('No active student ID card template found', 'Failed');
+                return redirect()->route('student_view', $id);
+            }
+
+            return $this->streamIdCardsPdf($id_card, collect([$student]), 2, 10);
+        } catch (\Exception $e) {
+            Toastr::error('Operation Failed', 'Failed');
+            return redirect()->back();
+        }
+    }
+
+    public function studentIdCardPrint(Request $request, $id)
+    {
+        $request->merge(['print' => 1]);
+        return $this->studentIdCardView($request, $id);
+    }
+
+    protected function streamIdCardsPdf($id_card, $s_students, $role_id, $gridGap = 10)
+    {
+        set_time_limit(2700);
+        $pdf = Pdf::loadView('backEnd.admin.idCard.student_id_card_pdf', [
+            'id_card' => $id_card,
+            's_students' => $s_students,
+            'role_id' => $role_id,
+            'gridGap' => $gridGap,
+        ]);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->setOption('isHtml5ParserEnabled', true);
+        $pdf->setOption('isRemoteEnabled', true);
+        $filename = Str::slug($id_card->title ?: 'student-id-card') . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     public function ajaxIdCard(Request $request){
@@ -317,7 +445,7 @@ class SmStudentIdCardController extends Controller
         }
     }
 
-    public function generateIdCardPrint($s_id, $c_id)
+    public function generateIdCardPrint(Request $request, $s_id, $c_id)
     {
         set_time_limit(2700);
         try {
@@ -325,17 +453,17 @@ class SmStudentIdCardController extends Controller
             $s_ids = explode('-', $s_id);
             $students = [];
             foreach ($s_ids as $sId) {
-                $students[] = SmStudent::find($sId);
+                $students[] = SmStudent::with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section')->find($sId);
             }
 
-           
-
             $id_card = SmStudentIdCard::find($c_id);
+            $students = collect($students)->filter();
+
+            if ($request->get('format') === 'pdf') {
+                return $this->streamIdCardsPdf($id_card, $students, 2, 10);
+            }
 
             return view('backEnd.admin.idCard.student_id_card_print_2', ['id_card' => $id_card, 'students' => $students]);
-
-            $pdf = Pdf::loadView('backEnd.admin.idCard.student_id_card_print_2', ['id_card' => $id_card, 'students' => $students]);
-            return $pdf->stream($id_card->title . '.pdf');
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();

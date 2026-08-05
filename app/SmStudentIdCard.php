@@ -2,6 +2,7 @@
 namespace App;
 
 use App\Role;
+use App\Helpers\IdCardTemplateHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
@@ -10,11 +11,26 @@ use App\Scopes\StatusAcademicSchoolScope;
 class SmStudentIdCard extends Model
 {
     use HasFactory;
+
+    protected $casts = [
+        'field_positions' => 'array',
+    ];
+
     protected static function boot()
     {
         parent::boot();
   
         static::addGlobalScope(new StatusAcademicSchoolScope);
+    }
+
+    public function isTemplateMode(): bool
+    {
+        return ($this->design_mode ?? 'classic') === 'template';
+    }
+
+    public function resolvedPositions(): array
+    {
+        return IdCardTemplateHelper::positions($this);
     }
     
     public static function roleName($id){
