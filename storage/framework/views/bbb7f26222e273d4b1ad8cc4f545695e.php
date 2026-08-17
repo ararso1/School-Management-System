@@ -227,8 +227,8 @@
             <?php if(is_show('fathers_photo')): ?>
                 <div class="mr-20 mt-20">
                     <img class="student-meta-img img-100"
-                         src="<?php echo e(file_exists(@$student_detail->parents->fathers_photo) ? asset($student_detail->parents->fathers_photo) : asset('public/uploads/staff/demo/father.png')); ?>"
-                         alt="">
+                         src="<?php echo e(uploadedAsset(@$student_detail->parents->fathers_photo, 'public/uploads/staff/demo/father.png')); ?>"
+                         alt="<?php echo e(@$student_detail->parents->fathers_name); ?>">
 
                 </div>
             <?php endif; ?>
@@ -294,8 +294,8 @@
             <?php if(is_show('mothers_photo')): ?>
                 <div class="mr-20 mt-20">
                     <img class="student-meta-img img-100"
-                         src="<?php echo e(file_exists(@$student_detail->parents->mothers_photo) ? asset($student_detail->parents->mothers_photo) : asset('public/uploads/staff/demo/mother.jpg')); ?>"
-                         alt="">
+                         src="<?php echo e(uploadedAsset(@$student_detail->parents->mothers_photo, 'public/uploads/staff/demo/mother.jpg')); ?>"
+                         alt="<?php echo e(@$student_detail->parents->mothers_name); ?>">
                 </div>
             <?php endif; ?>
             <div class="w-100">
@@ -359,8 +359,8 @@
             <?php if(is_show('guardians_photo')): ?>
                 <div class="mr-20 mt-20">
                     <img class="student-meta-img img-100"
-                         src="<?php echo e(file_exists(@$student_detail->parents->guardians_photo) ? asset($student_detail->parents->guardians_photo) : asset('public/uploads/staff/demo/guardian.jpg')); ?>"
-                         alt="">
+                         src="<?php echo e(uploadedAsset(@$student_detail->parents->guardians_photo, 'public/uploads/staff/demo/guardian.jpg')); ?>"
+                         alt="<?php echo e(@$student_detail->parents->guardians_name); ?>">
 
                 </div>
             <?php endif; ?>

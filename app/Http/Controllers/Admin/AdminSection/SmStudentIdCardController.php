@@ -165,9 +165,17 @@ class SmStudentIdCardController extends Controller
             $destination='public/uploads/studentIdCard/';  
             $id_card = SmStudentIdCard::find($request->id);
             $id_card->title = $request->title;
-            $id_card->logo = fileUpdate($id_card->logo,$request->logo,$destination);          
-            $id_card->background_img = fileUpdate($id_card->background_img,$request->background_img,$destination);          
-            $id_card->background_img_back = fileUpdate($id_card->background_img_back, $request->background_img_back, $destination);
+            $id_card->logo = fileUpdate($id_card->logo,$request->logo,$destination);
+            $id_card->background_img = IdCardTemplateHelper::replaceUploadedAsset(
+                $id_card->background_img,
+                $request->file('background_img'),
+                $destination
+            );
+            $id_card->background_img_back = IdCardTemplateHelper::replaceUploadedAsset(
+                $id_card->background_img_back,
+                $request->file('background_img_back'),
+                $destination
+            );
             $id_card->profile_image = fileUpdate($id_card->profile_image,$request->profile_image,$destination);
             if(in_array(2, $request->applicable_user) || in_array(3, $request->applicable_user)){
                 $id_card->role_id = json_encode($request->applicable_user);
@@ -239,13 +247,8 @@ class SmStudentIdCardController extends Controller
                 unlink($id_card->profile_image);
             }
 
-            if ($id_card->background_img != "" && file_exists($id_card->background_img)) {
-                unlink($id_card->background_img);
-            }
-
-            if (!empty($id_card->background_img_back) && file_exists($id_card->background_img_back)) {
-                unlink($id_card->background_img_back);
-            }
+            IdCardTemplateHelper::deleteAssetFile($id_card->background_img);
+            IdCardTemplateHelper::deleteAssetFile($id_card->background_img_back);
 
             $id_card->delete();
             Toastr::success('Operation successful', 'Success');
@@ -317,7 +320,7 @@ class SmStudentIdCardController extends Controller
     public function studentIdCardView(Request $request, $id)
     {
         try {
-            $student = SmStudent::with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section')
+            $student = SmStudent::with('parents', 'bloodGroup', 'gender', 'category', 'getClassRecord.class', 'getClassRecord.section')
                 ->findOrFail($id);
             $id_cards = IdCardTemplateHelper::cardsForRole(2);
             if ($id_cards->isEmpty()) {
@@ -347,7 +350,7 @@ class SmStudentIdCardController extends Controller
     public function studentIdCardDownload(Request $request, $id)
     {
         try {
-            $student = SmStudent::with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section')
+            $student = SmStudent::with('parents', 'bloodGroup', 'gender', 'category', 'getClassRecord.class', 'getClassRecord.section')
                 ->findOrFail($id);
 
             $cardId = $request->get('id_card');
@@ -360,7 +363,12 @@ class SmStudentIdCardController extends Controller
                 return redirect()->route('student_view', $id);
             }
 
-            return $this->streamIdCardsPdf($id_card, collect([$student]), 2, 10);
+            $side = strtolower((string) $request->get('side', 'both'));
+            if (!in_array($side, ['front', 'back', 'both'], true)) {
+                $side = 'both';
+            }
+
+            return $this->streamIdCardsPdf($id_card, collect([$student]), 2, 10, $side);
         } catch (\Exception $e) {
             Toastr::error('Operation Failed', 'Failed');
             return redirect()->back();
@@ -373,19 +381,36 @@ class SmStudentIdCardController extends Controller
         return $this->studentIdCardView($request, $id);
     }
 
-    protected function streamIdCardsPdf($id_card, $s_students, $role_id, $gridGap = 10)
+    protected function streamIdCardsPdf($id_card, $s_students, $role_id, $gridGap = 10, $side = 'both')
     {
         set_time_limit(2700);
+        $side = strtolower((string) $side);
+        if (!in_array($side, ['front', 'back', 'both'], true)) {
+            $side = 'both';
+        }
+
         $pdf = Pdf::loadView('backEnd.admin.idCard.student_id_card_pdf', [
             'id_card' => $id_card,
             's_students' => $s_students,
             'role_id' => $role_id,
             'gridGap' => $gridGap,
+            'side' => $side,
         ]);
-        $pdf->setPaper('A4', 'portrait');
+
+        if (in_array($side, ['front', 'back'], true) && ($id_card->design_mode ?? 'classic') === 'template') {
+            $widthMm = !empty($id_card->pl_width) ? (float) $id_card->pl_width : 86.0;
+            $heightMm = !empty($id_card->pl_height) ? (float) $id_card->pl_height : 49.0;
+            $mmToPt = 2.834645669;
+            $pdf->setPaper([0, 0, $widthMm * $mmToPt, $heightMm * $mmToPt]);
+        } else {
+            $pdf->setPaper('A4', 'portrait');
+        }
+
         $pdf->setOption('isHtml5ParserEnabled', true);
         $pdf->setOption('isRemoteEnabled', true);
-        $filename = Str::slug($id_card->title ?: 'student-id-card') . '.pdf';
+
+        $suffix = $side === 'both' ? '' : '-' . $side;
+        $filename = Str::slug(($id_card->title ?: 'student-id-card') . $suffix) . '.pdf';
 
         return $pdf->download($filename);
     }
@@ -453,7 +478,7 @@ class SmStudentIdCardController extends Controller
             $s_ids = explode('-', $s_id);
             $students = [];
             foreach ($s_ids as $sId) {
-                $students[] = SmStudent::with('parents', 'bloodGroup', 'gender', 'getClassRecord.class', 'getClassRecord.section')->find($sId);
+                $students[] = SmStudent::with('parents', 'bloodGroup', 'gender', 'category', 'getClassRecord.class', 'getClassRecord.section')->find($sId);
             }
 
             $id_card = SmStudentIdCard::find($c_id);

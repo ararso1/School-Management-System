@@ -115,7 +115,13 @@
         </form>
         <div class="actions">
             <button type="button" class="primary-btn" onclick="window.print()">Print</button>
-            <a class="primary-btn outline" href="{{ route('student_id_card_download', [$student->id]) }}?id_card={{ $id_card->id }}">Download PDF</a>
+            @if(($id_card->design_mode ?? 'classic') === 'template')
+                <a class="primary-btn outline" href="{{ route('student_id_card_download', [$student->id]) }}?id_card={{ $id_card->id }}&side=front">Download Front</a>
+                <a class="primary-btn outline" href="{{ route('student_id_card_download', [$student->id]) }}?id_card={{ $id_card->id }}&side=back">Download Back</a>
+                <a class="primary-btn outline" href="{{ route('student_id_card_download', [$student->id]) }}?id_card={{ $id_card->id }}&side=both">Download Both</a>
+            @else
+                <a class="primary-btn outline" href="{{ route('student_id_card_download', [$student->id]) }}?id_card={{ $id_card->id }}">Download PDF</a>
+            @endif
             <a class="primary-btn outline" href="{{ route('student_view', $student->id) }}">Back to Profile</a>
         </div>
     </div>
@@ -145,7 +151,7 @@
                         <tr><td align="left">Admission No</td><td align="right">{{ $student->admission_no }}</td></tr>
                     @endif
                     @if($id_card->class == 1)
-                        <tr><td align="left">Class</td><td align="right">{{ \App\Helpers\IdCardTemplateHelper::studentClassLabel($student) }}</td></tr>
+                        <tr><td align="left">Classification</td><td align="right">{{ \App\Helpers\IdCardTemplateHelper::studentCategoryLabel($student) }}</td></tr>
                     @endif
                     @if(($id_card->gender ?? 0) == 1)
                         <tr><td align="left">Gender</td><td align="right">{{ optional($student->gender)->base_setup_name }}</td></tr>

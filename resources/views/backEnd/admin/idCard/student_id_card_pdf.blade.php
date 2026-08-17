@@ -2,9 +2,9 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>{{ $id_card->title ?? 'Student ID Cards' }}</title>
+    <title>{{ $id_card->title ?? 'Student ID Cards' }}{{ isset($side) && $side !== 'both' ? ' - ' . ucfirst($side) : '' }}</title>
     <style>
-        @page { margin: 8mm; }
+        @page { margin: {{ isset($side) && in_array($side, ['front', 'back'], true) ? '0' : '8mm' }}; }
         * { box-sizing: border-box; }
         body {
             margin: 0;
@@ -15,22 +15,26 @@
         }
         .id-card-pair {
             page-break-inside: avoid;
-            margin: 0 auto 6mm;
+            margin: 0 auto {{ isset($side) && in_array($side, ['front', 'back'], true) ? '0' : '6mm' }};
             text-align: center;
         }
         .id-card-side {
-            position: relative;
-            overflow: hidden;
-            margin: 0 auto 4mm;
+            position: relative !important;
+            overflow: hidden !important;
+            margin: 0 auto {{ isset($side) && in_array($side, ['front', 'back'], true) ? '0' : '4mm' }};
             background: #fff;
         }
-        .id-card-back {
-            page-break-after: always;
+        .id-card-side > div {
+            position: absolute !important;
         }
-        img { border: 0; }
+        .id-card-back {
+            page-break-after: {{ isset($side) && $side === 'both' ? 'always' : 'auto' }};
+        }
+        img { border: 0; display: block; }
     </style>
 </head>
 <body>
+@php $exportSide = isset($side) ? $side : 'both'; @endphp
 @foreach($s_students as $staff_student)
     @if(($id_card->design_mode ?? 'classic') === 'template' && (int) $role_id === 2)
         @include('backEnd.admin.idCard.partials.template_card', [
@@ -38,6 +42,7 @@
             'student' => $staff_student,
             'role_id' => $role_id,
             'forPdf' => true,
+            'side' => $exportSide,
         ])
     @else
         <div style="page-break-after:always;padding:10mm;font-family:DejaVu Sans, Arial, sans-serif;">

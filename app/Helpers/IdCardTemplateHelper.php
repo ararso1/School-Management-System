@@ -29,7 +29,7 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Full Name',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'admission_no' => [
                     'left' => 40,
@@ -41,7 +41,7 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Admission ID',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'class' => [
                     'left' => 40,
@@ -53,7 +53,7 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Classification',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'gender' => [
                     'left' => 40,
@@ -65,7 +65,7 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Gender',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'student_address' => [
                     'left' => 40,
@@ -77,7 +77,7 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Adress',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'admission_date' => [
                     'left' => 40,
@@ -89,7 +89,7 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Admission Date',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'footer_id' => [
                     'left' => 48,
@@ -100,9 +100,9 @@ class IdCardTemplateHelper
                     'font_weight' => '600',
                     'color' => '#ffffff',
                     'show_label' => 0,
-                    'label' => '',
-                    'mask' => 1,
-                    'mask_color' => '#006837',
+                    'label' => 'National ID',
+                    'mask' => 0,
+                    'mask_color' => 'transparent',
                 ],
             ],
             'back' => [
@@ -116,7 +116,7 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Guardian Name',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'guardian_phone' => [
                     'left' => 4,
@@ -128,15 +128,15 @@ class IdCardTemplateHelper
                     'color' => '#111111',
                     'show_label' => 1,
                     'label' => 'Guardian Phone',
-                    'mask' => 1,
+                    'mask' => 0,
                 ],
                 'qr' => [
                     'left' => 6.5,
                     'top' => 32,
                     'width' => 24,
                     'height' => 42,
-                    'mask' => 1,
-                    'mask_color' => '#ffffff',
+                    'mask' => 0,
+                    'mask_color' => 'transparent',
                 ],
             ],
         ];
@@ -156,24 +156,101 @@ class IdCardTemplateHelper
             return $defaults;
         }
 
-        return array_replace_recursive($defaults, $saved);
+        $merged = array_replace_recursive($defaults, $saved);
+
+        // Never paint white/colored masks behind dynamic text fields.
+        foreach (['front', 'back'] as $side) {
+            if (empty($merged[$side]) || !is_array($merged[$side])) {
+                continue;
+            }
+            foreach ($merged[$side] as $field => &$cfg) {
+                if (!is_array($cfg) || $field === 'photo') {
+                    continue;
+                }
+                $cfg['mask'] = 0;
+                $cfg['mask_color'] = 'transparent';
+            }
+            unset($cfg);
+        }
+
+        // National ID: plain white text, no background.
+        if (isset($merged['front']['footer_id']) && is_array($merged['front']['footer_id'])) {
+            $merged['front']['footer_id']['mask'] = 0;
+            $merged['front']['footer_id']['mask_color'] = 'transparent';
+            $merged['front']['footer_id']['show_label'] = 0;
+            $merged['front']['footer_id']['color'] = '#ffffff';
+            if (empty($merged['front']['footer_id']['label']) || strcasecmp((string) $merged['front']['footer_id']['label'], 'FAN') === 0) {
+                $merged['front']['footer_id']['label'] = 'National ID';
+            }
+        }
+
+        return $merged;
     }
 
-    public static function style(array $pos, string $extra = ''): string
+    /**
+     * Build absolute field box CSS. PDF uses mm so DomPDF keeps fixed positions
+     * regardless of value length (flex/% is unreliable in DomPDF).
+     */
+    public static function style(array $pos, string $extra = '', bool $forPdf = false, $cardWidthMm = 86, $cardHeightMm = 49): string
     {
-        $left = $pos['left'] ?? 0;
-        $top = $pos['top'] ?? 0;
-        $width = $pos['width'] ?? 20;
-        $height = $pos['height'] ?? 6;
+        $left = (float) ($pos['left'] ?? 0);
+        $top = (float) ($pos['top'] ?? 0);
+        $width = (float) ($pos['width'] ?? 20);
+        $height = (float) ($pos['height'] ?? 6);
         $fontSize = $pos['font_size'] ?? 2.5;
         $fontWeight = $pos['font_weight'] ?? '500';
         $color = $pos['color'] ?? '#111111';
         $radius = $pos['border_radius'] ?? '0';
         $border = $pos['border'] ?? 'none';
+        $cardWidthMm = (float) ($cardWidthMm ?: 86);
+        $cardHeightMm = (float) ($cardHeightMm ?: 49);
 
-        return "position:absolute;left:{$left}%;top:{$top}%;width:{$width}%;height:{$height}%;"
+        if ($forPdf) {
+            $l = round($cardWidthMm * $left / 100, 3) . 'mm';
+            $t = round($cardHeightMm * $top / 100, 3) . 'mm';
+            $w = round($cardWidthMm * $width / 100, 3) . 'mm';
+            $hMm = round($cardHeightMm * $height / 100, 3);
+            $h = $hMm . 'mm';
+            $lineHeight = $hMm . 'mm';
+        } else {
+            $l = $left . '%';
+            $t = $top . '%';
+            $w = $width . '%';
+            $h = $height . '%';
+            $lineHeight = '100%';
+        }
+
+        return "position:absolute;left:{$l};top:{$t};width:{$w};height:{$h};"
             . "font-size:{$fontSize}mm;font-weight:{$fontWeight};color:{$color};"
-            . "border-radius:{$radius};border:{$border};overflow:hidden;box-sizing:border-box;{$extra}";
+            . "border-radius:{$radius};border:{$border};overflow:hidden;box-sizing:border-box;"
+            . "background:transparent;background-color:transparent;padding:0;margin:0;"
+            . ($forPdf ? "line-height:{$lineHeight};" : '')
+            . $extra;
+    }
+
+    /** Extra CSS for a text field box (preview uses flex; PDF avoids flex). */
+    public static function textFieldExtra(bool $forPdf = false, bool $center = false, bool $nowrap = true): string
+    {
+        $extra = 'z-index:2;';
+        if ($forPdf) {
+            $extra .= 'display:block;';
+            if ($center) {
+                $extra .= 'text-align:center;';
+            }
+            if ($nowrap) {
+                $extra .= 'white-space:nowrap;';
+            }
+            return $extra;
+        }
+
+        $extra .= 'display:flex;align-items:center;';
+        if ($center) {
+            $extra .= 'justify-content:center;';
+        }
+        if ($nowrap) {
+            $extra .= 'white-space:nowrap;';
+        }
+        return $extra;
     }
 
     public static function profileUrl($studentId): string
@@ -257,6 +334,23 @@ class IdCardTemplateHelper
         return implode(', ', array_unique($labels));
     }
 
+    /** Category name for ID card Classification field. */
+    public static function studentCategoryLabel($student): string
+    {
+        if (!$student) {
+            return '';
+        }
+
+        $category = null;
+        if (isset($student->category) && $student->category) {
+            $category = $student->category;
+        } elseif (!empty($student->student_category_id)) {
+            $category = \App\SmStudentCategory::find($student->student_category_id);
+        }
+
+        return $category->category_name ?? '';
+    }
+
     public static function mergePositionsFromRequest(array $requestPositions = []): string
     {
         $positions = self::defaultPositions();
@@ -281,6 +375,24 @@ class IdCardTemplateHelper
                     }
                 }
             }
+        }
+
+        foreach (['front', 'back'] as $side) {
+            if (empty($positions[$side]) || !is_array($positions[$side])) {
+                continue;
+            }
+            foreach ($positions[$side] as $field => &$cfg) {
+                if (!is_array($cfg) || $field === 'photo') {
+                    continue;
+                }
+                $cfg['mask'] = 0;
+                $cfg['mask_color'] = 'transparent';
+            }
+            unset($cfg);
+        }
+        if (isset($positions['front']['footer_id']) && is_array($positions['front']['footer_id'])) {
+            $positions['front']['footer_id']['color'] = '#ffffff';
+            $positions['front']['footer_id']['show_label'] = 0;
         }
 
         return json_encode($positions);
@@ -310,6 +422,67 @@ class IdCardTemplateHelper
         }
 
         return null;
+    }
+
+    /**
+     * Upload a new asset and delete the previous file so backgrounds never stack.
+     */
+    public static function replaceUploadedAsset(?string $existingRelative, $file, string $destination): string
+    {
+        if (!$file) {
+            return $existingRelative ?: '';
+        }
+
+        $newPath = fileUpload($file, $destination);
+        if (!$newPath) {
+            return $existingRelative ?: '';
+        }
+
+        if ($existingRelative && $existingRelative !== $newPath) {
+            self::deleteAssetFile($existingRelative);
+        }
+
+        return $newPath;
+    }
+
+    public static function deleteAssetFile(?string $relative): void
+    {
+        if (!$relative) {
+            return;
+        }
+
+        $normalized = ltrim(str_replace('\\', '/', $relative), '/');
+        $protected = [
+            'public/uploads/studentIdCard/meahadal_front.png',
+            'public/uploads/studentIdCard/meahadal_back.png',
+            'public/backEnd/id_card/img/vertical_bg.png',
+            'public/backEnd/id_card/img/horizontal_bg.png',
+            'public/backEnd/id_card/img/thumb.png',
+        ];
+        if (in_array($normalized, $protected, true)) {
+            return;
+        }
+
+        $abs = self::absolutePath($relative);
+        if ($abs && is_file($abs)) {
+            @unlink($abs);
+        }
+    }
+
+    public static function bustedAssetUrl(?string $relative, ?string $fallback = null): string
+    {
+        $path = $relative ?: $fallback;
+        if (!$path) {
+            return '';
+        }
+
+        $url = self::imageSrc($path, false, $fallback);
+        $abs = self::absolutePath($path);
+        if ($abs) {
+            $url .= (strpos($url, '?') === false ? '?' : '&') . 'v=' . filemtime($abs);
+        }
+
+        return $url;
     }
 
     public static function imageSrc(?string $relative, bool $forPdf = false, ?string $fallback = null): string

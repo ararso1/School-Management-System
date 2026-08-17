@@ -29,6 +29,9 @@
 
         <?php
             $designMode = old('design_mode', isset($id_card) ? ($id_card->design_mode ?? 'classic') : 'template');
+            if (!class_exists(\App\Helpers\IdCardTemplateHelper::class)) {
+                throw new \RuntimeException('Missing file: app/Helpers/IdCardTemplateHelper.php — upload it to the live server.');
+            }
             $fieldPositions = \App\Helpers\IdCardTemplateHelper::positions($id_card ?? null);
         ?>
 
@@ -83,7 +86,7 @@
                     <button class="primary-btn-small-input cust-margin id_card_button" type="button">
                         <label class="primary-btn small fix-gr-bg" for="document_file_5"><?php echo app('translator')->get('common.browse'); ?></label>
                         <input type="file" class="d-none" name="background_img" id="document_file_5"
-                            onchange="imageChangeWithBackFile(this)"
+                            onchange="imageChangeWithBackFile(this); if(this.files&&this.files[0]){document.getElementById('placeholderFileFiveName').placeholder=this.files[0].name;}"
                             value="<?php echo e(isset($id_card) ? ($id_card->background_img != '' ? getFilePath3($id_card->background_img) : '') : ''); ?>">
                     </button>
                 </div>
@@ -888,7 +891,7 @@
         <div class="template-only-field mt-40">
             <h4 class="mb-15">Field Positions (% of card) — Front</h4>
             <p class="mb-20 text-muted">Adjust Left / Top / Width / Height / Font size (mm). Preview updates live as you type — save when ready.</p>
-            <?php $__currentLoopData = ['photo' => 'Student Photo', 'student_name' => 'Full Name', 'admission_no' => 'Admission ID', 'class' => 'Classification', 'gender' => 'Gender', 'student_address' => 'Address', 'admission_date' => 'Admission Date', 'footer_id' => 'Footer ID']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php $__currentLoopData = ['photo' => 'Student Photo', 'student_name' => 'Full Name', 'admission_no' => 'Admission ID', 'class' => 'Classification', 'gender' => 'Gender', 'student_address' => 'Address', 'admission_date' => 'Admission Date', 'footer_id' => 'National ID Number']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $key => $label): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                 <?php $pos = $fieldPositions['front'][$key] ?? []; ?>
                 <div class="row mb-15 align-items-end js-pos-row" data-side="front" data-field="<?php echo e($key); ?>">
                     <div class="col-lg-2"><strong><?php echo e($label); ?></strong></div>
@@ -917,8 +920,14 @@
                             <label>Label text</label>
                             <input class="primary_input_field form-control js-pos-input" data-prop="label" type="text" name="field_positions[front][<?php echo e($key); ?>][label]" value="<?php echo e($pos['label'] ?? $label); ?>">
                             <input type="hidden" name="field_positions[front][<?php echo e($key); ?>][show_label]" value="1">
-                            <input type="hidden" name="field_positions[front][<?php echo e($key); ?>][mask]" value="1">
+                            <input type="hidden" name="field_positions[front][<?php echo e($key); ?>][mask]" value="0">
+                            <input type="hidden" name="field_positions[front][<?php echo e($key); ?>][mask_color]" value="transparent">
                         </div>
+                    <?php elseif($key === 'footer_id'): ?>
+                        <input type="hidden" name="field_positions[front][footer_id][mask]" value="0">
+                        <input type="hidden" name="field_positions[front][footer_id][mask_color]" value="transparent">
+                        <input type="hidden" name="field_positions[front][footer_id][color]" value="#ffffff">
+                        <input type="hidden" name="field_positions[front][footer_id][show_label]" value="0">
                     <?php endif; ?>
                 </div>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -953,10 +962,12 @@
                             <label>Label text</label>
                             <input class="primary_input_field form-control js-pos-input" data-prop="label" type="text" name="field_positions[back][<?php echo e($key); ?>][label]" value="<?php echo e($pos['label'] ?? $label); ?>">
                             <input type="hidden" name="field_positions[back][<?php echo e($key); ?>][show_label]" value="1">
-                            <input type="hidden" name="field_positions[back][<?php echo e($key); ?>][mask]" value="1">
+                            <input type="hidden" name="field_positions[back][<?php echo e($key); ?>][mask]" value="0">
+                            <input type="hidden" name="field_positions[back][<?php echo e($key); ?>][mask_color]" value="transparent">
                         </div>
                     <?php else: ?>
-                        <input type="hidden" name="field_positions[back][qr][mask]" value="1">
+                        <input type="hidden" name="field_positions[back][qr][mask]" value="0">
+                        <input type="hidden" name="field_positions[back][qr][mask_color]" value="transparent">
                     <?php endif; ?>
                 </div>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -1059,25 +1070,42 @@
                         el.addEventListener('change', applyCardSizeAndFont);
                     });
 
-                    // Keep preview in sync if back image browse updates placeholder only
+                    function replaceSideBackground(selector, file) {
+                        if (!file) return;
+                        var url = URL.createObjectURL(file);
+                        document.querySelectorAll(selector).forEach(function (side) {
+                            // Clear any CSS background so the new image fully replaces the old one
+                            side.style.backgroundImage = 'none';
+                            side.style.background = '#fff';
+                            var img = side.querySelector('.js-card-bg');
+                            if (!img) {
+                                img = document.createElement('img');
+                                img.className = 'js-card-bg';
+                                img.alt = '';
+                                img.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;object-fit:fill;z-index:0;pointer-events:none;display:block;';
+                                side.insertBefore(img, side.firstChild);
+                            }
+                            if (img.dataset.objectUrl) {
+                                try { URL.revokeObjectURL(img.dataset.objectUrl); } catch (e) {}
+                            }
+                            img.dataset.objectUrl = url;
+                            img.src = url;
+                            img.style.display = 'block';
+                        });
+                    }
+
                     var backFile = document.getElementById('document_file_back_side');
                     if (backFile) {
                         backFile.addEventListener('change', function () {
                             if (!this.files || !this.files[0]) return;
-                            var url = URL.createObjectURL(this.files[0]);
-                            document.querySelectorAll('.id-card-template-preview .id-card-back').forEach(function (side) {
-                                side.style.backgroundImage = 'url(' + url + ')';
-                            });
+                            replaceSideBackground('.id-card-template-preview .id-card-back', this.files[0]);
                         });
                     }
                     var frontFile = document.getElementById('document_file_5');
                     if (frontFile) {
                         frontFile.addEventListener('change', function () {
                             if (!this.files || !this.files[0]) return;
-                            var url = URL.createObjectURL(this.files[0]);
-                            document.querySelectorAll('.id-card-template-preview .id-card-front').forEach(function (side) {
-                                side.style.backgroundImage = 'url(' + url + ')';
-                            });
+                            replaceSideBackground('.id-card-template-preview .id-card-front', this.files[0]);
                         });
                     }
                 }

@@ -933,6 +933,20 @@
                 $('.vertical__card').css('background-image',
                     'url(<?php echo e(asset('public/backEnd/id_card/img/horizontal_bg.png')); ?>)');
             }
+            // Template preview: fully clear front background (no stacked layers)
+            $('.id-card-template-preview .id-card-front').each(function () {
+                this.style.backgroundImage = 'none';
+                this.style.background = '#fff';
+                var img = this.querySelector('.js-card-bg');
+                if (img) {
+                    if (img.dataset.objectUrl) {
+                        try { URL.revokeObjectURL(img.dataset.objectUrl); } catch (e) {}
+                        delete img.dataset.objectUrl;
+                    }
+                    img.removeAttribute('src');
+                    img.style.display = 'none';
+                }
+            });
         });
 
         $(document).on("click", "#deleteProImg", function(event) {

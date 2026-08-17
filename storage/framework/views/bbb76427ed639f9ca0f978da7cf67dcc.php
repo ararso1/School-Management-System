@@ -116,7 +116,13 @@
         </form>
         <div class="actions">
             <button type="button" class="primary-btn" onclick="window.print()">Print</button>
-            <a class="primary-btn outline" href="<?php echo e(route('student_id_card_download', [$student->id])); ?>?id_card=<?php echo e($id_card->id); ?>">Download PDF</a>
+            <?php if(($id_card->design_mode ?? 'classic') === 'template'): ?>
+                <a class="primary-btn outline" href="<?php echo e(route('student_id_card_download', [$student->id])); ?>?id_card=<?php echo e($id_card->id); ?>&side=front">Download Front</a>
+                <a class="primary-btn outline" href="<?php echo e(route('student_id_card_download', [$student->id])); ?>?id_card=<?php echo e($id_card->id); ?>&side=back">Download Back</a>
+                <a class="primary-btn outline" href="<?php echo e(route('student_id_card_download', [$student->id])); ?>?id_card=<?php echo e($id_card->id); ?>&side=both">Download Both</a>
+            <?php else: ?>
+                <a class="primary-btn outline" href="<?php echo e(route('student_id_card_download', [$student->id])); ?>?id_card=<?php echo e($id_card->id); ?>">Download PDF</a>
+            <?php endif; ?>
             <a class="primary-btn outline" href="<?php echo e(route('student_view', $student->id)); ?>">Back to Profile</a>
         </div>
     </div>
@@ -146,7 +152,7 @@
                         <tr><td align="left">Admission No</td><td align="right"><?php echo e($student->admission_no); ?></td></tr>
                     <?php endif; ?>
                     <?php if($id_card->class == 1): ?>
-                        <tr><td align="left">Class</td><td align="right"><?php echo e(\App\Helpers\IdCardTemplateHelper::studentClassLabel($student)); ?></td></tr>
+                        <tr><td align="left">Classification</td><td align="right"><?php echo e(\App\Helpers\IdCardTemplateHelper::studentCategoryLabel($student)); ?></td></tr>
                     <?php endif; ?>
                     <?php if(($id_card->gender ?? 0) == 1): ?>
                         <tr><td align="left">Gender</td><td align="right"><?php echo e(optional($student->gender)->base_setup_name); ?></td></tr>

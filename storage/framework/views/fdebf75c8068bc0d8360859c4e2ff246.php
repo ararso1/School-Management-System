@@ -1,1 +1,0 @@
-<?php echo @$body; ?><?php /**PATH C:\xampp\htdocs\school\resources\views/backEnd/email/emailBody.blade.php ENDPATH**/ ?>

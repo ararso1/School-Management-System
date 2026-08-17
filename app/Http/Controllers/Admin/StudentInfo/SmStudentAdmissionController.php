@@ -522,7 +522,7 @@ class SmStudentAdmissionController extends Controller
     public function updateStudentInfo($request, $studentRecord = null)
     {
 
-        $parentInfo = ($request->fathers_name || $request->fathers_phone || $request->mothers_name || $request->mothers_phone || $request->guardians_email || $request->guardians_phone)  ? true : false;
+        $parentInfo = ($request->fathers_name || $request->fathers_phone || $request->mothers_name || $request->mothers_phone || $request->guardians_email || $request->guardians_phone || $request->guardians_name || $request->guardians_occupation || $request->guardians_address)  ? true : false;
         $student_detail = SmStudent::find($request->id);
         $parentUserId = $student_detail->parents ? $student_detail->parents->user_id : null;
         // custom field validation start
@@ -598,29 +598,58 @@ class SmStudentAdmissionController extends Controller
                         $parent = new SmParent();
                     }
                     $parent->user_id = $user_parent->id ?? null;
-                    $parent->fathers_name = $request->fathers_name;
-                    $parent->fathers_mobile = $request->fathers_phone;
-                    $parent->fathers_occupation = $request->fathers_occupation;
+                    if ($request->filled('fathers_name') || $request->has('fathers_name')) {
+                        $parent->fathers_name = $request->fathers_name;
+                    }
+                    if ($request->filled('fathers_phone') || $request->has('fathers_phone')) {
+                        $parent->fathers_mobile = $request->fathers_phone;
+                    }
+                    if ($request->filled('fathers_occupation') || $request->has('fathers_occupation')) {
+                        $parent->fathers_occupation = $request->fathers_occupation;
+                    }
                     if($request->fathers_photo != null ) {
                         $parent->fathers_photo = fileUpdate($parent->fathers_photo, $request->fathers_photo, $student_file_destination);
                     }
-                    $parent->mothers_name = $request->mothers_name;
-                    $parent->mothers_mobile = $request->mothers_phone;
-                    $parent->mothers_occupation = $request->mothers_occupation;
+                    if ($request->filled('mothers_name') || $request->has('mothers_name')) {
+                        $parent->mothers_name = $request->mothers_name;
+                    }
+                    if ($request->filled('mothers_phone') || $request->has('mothers_phone')) {
+                        $parent->mothers_mobile = $request->mothers_phone;
+                    }
+                    if ($request->filled('mothers_occupation') || $request->has('mothers_occupation')) {
+                        $parent->mothers_occupation = $request->mothers_occupation;
+                    }
                     if($request->mothers_photo != null) {
                         $parent->mothers_photo = fileUpdate($parent->mothers_photo, $request->mothers_photo, $student_file_destination);
                     }
-                    $parent->guardians_name = $request->guardians_name;
-                    $parent->guardians_mobile = $request->guardians_phone;
-                    $parent->guardians_email = $request->guardians_email;
-                    $parent->guardians_occupation = $request->guardians_occupation;
-                    $parent->guardians_relation = $request->relation;
-                    $parent->relation = $request->relationButton;
+                    // Always persist guardian fields when present on the edit form
+                    if ($request->has('guardians_name')) {
+                        $parent->guardians_name = $request->guardians_name;
+                    }
+                    if ($request->has('guardians_phone')) {
+                        $parent->guardians_mobile = $request->guardians_phone;
+                    }
+                    if ($request->has('guardians_email')) {
+                        $parent->guardians_email = $request->guardians_email;
+                    }
+                    if ($request->has('guardians_occupation')) {
+                        $parent->guardians_occupation = $request->guardians_occupation;
+                    }
+                    if ($request->has('relation')) {
+                        $parent->guardians_relation = $request->relation;
+                    }
+                    if ($request->has('relationButton')) {
+                        $parent->relation = $request->relationButton;
+                    }
                     if ($guardianPhotoChanged) {
                         $parent->guardians_photo = $guardians_photo;
                     }
-                    $parent->guardians_address = $request->guardians_address;
-                    $parent->is_guardian = $request->is_guardian;
+                    if ($request->has('guardians_address')) {
+                        $parent->guardians_address = $request->guardians_address;
+                    }
+                    if ($request->has('is_guardian')) {
+                        $parent->is_guardian = $request->is_guardian;
+                    }
                     $parent->save();
                 }
             }
